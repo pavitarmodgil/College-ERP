@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Create User — UniPortal</title>
+  <link rel="icon" href="data:image/svg+xml,
+<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22>
+<text y=%22.9em%22 font-size=%2290%22>🎓</text>
+</svg>">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-root">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <a href="/admin-dashboard" class="topbar-brand"><div class="tb-box">🎓</div>Uni<span>Portal</span></a>
+    <div class="topbar-right">
+      <div class="topbar-user">
+        <div class="avatar avatar-admin" data-user-initial>A</div>
+        <div class="user-info">
+          <span class="uname" data-user-name>Admin</span>
+          <span class="urole urole-admin">🛡️ Administrator</span>
+        </div>
+      </div>
+      <a href="/admin-dashboard" class="btn btn-ghost btn-sm">← Dashboard</a>
+      <button class="btn btn-danger btn-sm" data-logout>Logout</button>
+    </div>
+  </header>
+
+  <main class="page-body">
+
+    <!-- Page header -->
+    <div style="margin-bottom:28px;animation:fadeSlide .35s ease both">
+      <h1 style="font-size:1.9rem;font-weight:800;color:var(--ink);margin-bottom:4px">Create User Account</h1>
+      <p style="font-size:14px;color:var(--muted)">Add a new teacher or student. A temporary password will be assigned and they'll be prompted to change it on first login.</p>
+    </div>
+
+    <div id="alertMsg" class="alert" role="alert"></div>
+
+    <!-- Form Card -->
+    <div class="form-card">
+      <h2 class="form-card-title">New Account Details</h2>
+      <p class="form-card-sub">All fields marked are required. StudentID is auto-generated for students.</p>
+
+      <form id="createUserForm" novalidate>
+
+        <!-- Role selector -->
+        <div style="margin-bottom:22px">
+          <label style="display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:10px">Select Role *</label>
+          <div class="role-select-row">
+            <div class="role-option" data-role="teacher">
+              <input type="radio" name="role" value="teacher" id="roleTeacher"/>
+              <div class="ro-icon">📚</div>
+              <div>
+                <div class="ro-label">Teacher</div>
+                <div class="ro-desc">Faculty member</div>
+              </div>
+            </div>
+            <div class="role-option" data-role="student">
+              <input type="radio" name="role" value="student" id="roleStudent"/>
+              <div class="ro-icon">🎓</div>
+              <div>
+                <div class="ro-label">Student</div>
+                <div class="ro-desc">Auto-assigns Student ID</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Basic info -->
+        <div class="form-grid">
+          <div class="field field-full">
+            <label for="name">Full Name *</label>
+            <div class="input-wrap">
+              <span class="input-icon">👤</span>
+              <input type="text" id="name" placeholder="e.g. Dr. Priya Kapoor"/>
+            </div>
+          </div>
+
+          <div class="field field-full">
+            <label for="email">Email Address *</label>
+            <div class="input-wrap">
+              <span class="input-icon">✉️</span>
+              <input type="email" id="email" placeholder="user@uni.com"/>
+            </div>
+          </div>
+
+          <div class="field field-full">
+            <label for="password">Temporary Password *</label>
+            <div class="input-wrap">
+              <span class="input-icon">🔑</span>
+              <input type="text" id="password" placeholder="e.g. temp123 (user will reset on first login)" autocomplete="off"/>
+            </div>
+          </div>
+
+          <div class="field field-full">
+            <label for="department">Department</label>
+            <div class="input-wrap">
+              <span class="input-icon">🏛️</span>
+              <input type="text" id="department" placeholder="e.g. Computer Science"/>
+            </div>
+          </div>
+
+          <!-- Student-only fields -->
+          <div class="field field-full student-fields">
+            
+            <label for="year">Academic Year</label>
+            <div class="input-wrap">
+              <span class="input-icon">📅</span>
+              <select id="year" style="padding-left:40px">
+                <option value="1st Year">1st Year</option>
+                <option value="2nd Year">2nd Year</option>
+                <option value="3rd Year">3rd Year</option>
+                <option value="4th Year">4th Year</option>
+              </select>
+            </div>
+          </div>
+          <br>
+        </div>
+
+        <!-- Info note -->
+        
+
+        <button type="submit" class="btn btn-primary btn-full" id="submitBtn">
+          <span class="btn-text">Create Account →</span>
+          <div class="spinner"></div>
+        </button>
+
+      </form>
+    </div>
+
+  </main>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

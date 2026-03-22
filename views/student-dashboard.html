@@ -1,0 +1,93 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Student Dashboard — UniPortal</title>
+  <link rel="icon" href="data:image/svg+xml,
+<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22>
+<text y=%22.9em%22 font-size=%2290%22>🎓</text>
+</svg>">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="app-root" id="studentDashboard">
+
+  <!-- Topbar -->
+  <header class="topbar">
+    <a href="/" class="topbar-brand"><div class="tb-box">🎓</div>Uni<span>Portal</span></a>
+    <div class="topbar-right">
+      <div class="topbar-user">
+        <div class="avatar avatar-student" data-user-initial>S</div>
+        <div class="user-info">
+          <span class="uname" data-user-name>Student</span>
+          <span class="urole urole-student">🎓 Student</span>
+        </div>
+      </div>
+      <button class="btn btn-danger btn-sm" data-logout>Logout</button>
+    </div>
+  </header>
+
+  <main class="page-body">
+
+    <!-- Banner -->
+    <div class="banner banner-student">
+      <div class="banner-bg"></div>
+      <div class="banner-grid"></div>
+      <div class="banner-inner">
+        <div>
+          <p style="font-size:13px;color:rgba(255,255,255,.4);margin-bottom:5px">Student Portal</p>
+          <h1>Welcome, <em class="c-student" data-user-name>Student</em> 🎓</h1>
+          <p>Your academic profile is ready. Keep your information up to date.</p>
+        </div>
+        <div class="banner-emoji">🎓</div>
+      </div>
+    </div>
+
+    <!-- Profile Card -->
+    <div class="sec-row"><h2 class="sec-title">My Profile</h2></div>
+
+    <div class="profile-card">
+      <div class="profile-avatar avatar-student" style="background:var(--student-bg);color:var(--student);font-family:'Syne',sans-serif;font-size:28px;font-weight:800;width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center" data-user-initial>S</div>
+      <div style="flex:1">
+        <h2 data-user-name style="font-size:1.4rem;font-weight:800;color:var(--ink)">Student</h2>
+        <p style="font-size:14px;color:var(--muted)" data-user-email></p>
+        <div class="profile-meta">
+          <div class="meta-item">🪪 &nbsp;<strong data-student-id>—</strong></div>
+          <div class="meta-item">🏛️ &nbsp;<strong data-dept>—</strong></div>
+          <div class="meta-item">📅 &nbsp;<strong data-year>—</strong></div>
+          <div class="meta-item"><span class="tag tag-student" style="padding:0">🎓 Student</span></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Info cards -->
+    <div class="stat-row cols-3" style="max-width:720px;margin-top:8px">
+      <div class="scard">
+        <div class="scard-icon" style="background:var(--student-bg)">🪪</div>
+        <div class="scard-num" style="font-size:18px;font-family:'Manrope',sans-serif" data-student-id>—</div>
+        <div class="scard-label">Student ID</div>
+      </div>
+      <div class="scard">
+        <div class="scard-icon" style="background:var(--primary-bg)">🏛️</div>
+        <div class="scard-num" style="font-size:16px;font-family:'Manrope',sans-serif" data-dept>—</div>
+        <div class="scard-label">Department</div>
+      </div>
+      <div class="scard">
+        <div class="scard-icon" style="background:var(--green-bg)">📅</div>
+        <div class="scard-num" style="font-size:18px;font-family:'Manrope',sans-serif" data-year>—</div>
+        <div class="scard-label">Academic Year</div>
+      </div>
+    </div>
+
+    <!-- Notice -->
+
+
+      
+    
+
+  </main>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

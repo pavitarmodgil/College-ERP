@@ -1,0 +1,25 @@
+# Environment variables — NEVER commit real secrets
+.env
+
+# Dependencies
+node_modules/
+
+# Logs
+logs/
+*.log
+npm-debug.log*
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Editor directories
+.vscode/
+.idea/
+
+# Build outputs (for future React/Vite frontend)
+client/dist/
+client/node_modules/
+
+# Prisma generated client (for future Phase 1)
+server/prisma/generated/

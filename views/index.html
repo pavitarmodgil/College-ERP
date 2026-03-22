@@ -1,0 +1,89 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>UniPortal — University Management System</title>
+  <link rel="icon" href="data:image/svg+xml,
+<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22>
+<text y=%22.9em%22 font-size=%2290%22>🎓</text>
+</svg>">
+  <link rel="icon" href="data:image/svg+xml,
+<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22>
+<text y=%22.9em%22 font-size=%2290%22>🎓</text>
+</svg>">
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="landing-root">
+
+  <!-- Navbar -->
+  <nav class="landing-nav">
+    <a href="/" class="nav-brand">
+      <div class="brand-box">🎓</div>
+      Uni<span>Portal</span>
+    </a>
+    <span style="font-size:13px;color:var(--muted)">University Management System</span>
+  </nav>
+
+  <!-- Hero -->
+  <div class="landing-hero">
+    <div class="landing-eyebrow">
+      <div class="eyebrow-dot"></div>
+      Academic Year 2025–26
+    </div>
+
+    <h1>One Portal for Every<br/><em>Academic Role</em></h1>
+
+    <p>Admins, teachers, and students each get a tailored login experience and dedicated dashboard — built with Node.js and Express.</p>
+
+    <!-- Role Cards -->
+    <div class="role-grid">
+
+      <!-- Admin -->
+      <a href="/admin-login" class="role-card admin-card">
+        <div class="role-icon admin-icon">🛡️</div>
+        <h2>Administrator</h2>
+        <p>Manage the entire system. Create teacher and student accounts, view all users, and oversee the platform.</p>
+        <span class="role-btn admin-btn">Admin Login →</span>
+      </a>
+
+      <!-- Teacher -->
+      <a href="/teacher-login" class="role-card teacher-card">
+        <div class="role-icon teacher-icon">📚</div>
+        <h2>Teacher</h2>
+        <p>Access your faculty dashboard and view the full student directory including IDs, departments, and status.</p>
+        <span class="role-btn teacher-btn">Teacher Login →</span>
+      </a>
+
+      <!-- Student -->
+      <a href="/student-login" class="role-card student-card">
+        <div class="role-icon student-icon">🎓</div>
+        <h2>Student</h2>
+        <p>View your personal academic profile. Login using your Student ID or registered email address.</p>
+        <span class="role-btn student-btn">Student Login →</span>
+      </a>
+
+    </div>
+
+    <!-- Footer note -->
+    <p style="margin-top:40px;font-size:13px;color:var(--faint)">
+      Not registered? Contact your administrator to create an account.
+    </p>
+  </div>
+
+</div>
+
+<!-- Show message if redirected from a protected page -->
+<script>
+  const reason = new URLSearchParams(window.location.search).get("reason");
+  if (reason === "auth") {
+    const el = document.createElement("div");
+    el.style.cssText = "position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#1a1917;color:white;padding:12px 22px;border-radius:12px;font-size:13.5px;font-family:Manrope,sans-serif;font-weight:500;z-index:999;animation:fadeIn .3s ease;box-shadow:0 8px 24px rgba(0,0,0,.25)";
+    el.textContent = "⚠️  Please log in to access that page.";
+    document.body.appendChild(el);
+    setTimeout(() => el.remove(), 4000);
+  }
+</script>
+</body>
+</html>

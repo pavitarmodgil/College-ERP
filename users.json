@@ -1,0 +1,70 @@
+[
+  {
+    "id": "u001",
+    "name": "Admin",
+    "email": "admin@uni.com",
+    "password": "admin123",
+    "role": "admin",
+    "firstLogin": false
+  },
+  {
+    "id": "u005049",
+    "name": "Aseem Kamra",
+    "email": "aseem@gmail.com",
+    "password": "aseem1234",
+    "role": "student",
+    "department": "B.E. CSE",
+    "firstLogin": false,
+    "studentId": "STU003",
+    "year": "1st Year"
+  },
+  {
+    "id": "u006796",
+    "name": "Dr. Aman Kumar",
+    "email": "amankumar@gmail.com",
+    "password": "aman1234",
+    "role": "teacher",
+    "department": "B.E. CSE",
+    "firstLogin": false
+  },
+  {
+    "id": "u007180",
+    "name": "Harveen Kaur",
+    "email": "harveen@gmail.com",
+    "password": "harveen123",
+    "role": "teacher",
+    "department": "B.E. CSE",
+    "firstLogin": true
+  },
+  {
+    "id": "u008976",
+    "name": "Ansh Sachdeva",
+    "email": "ansh@mori.com",
+    "password": "mori123",
+    "role": "student",
+    "department": "B.E. CSE",
+    "firstLogin": true,
+    "studentId": "STU004",
+    "year": "1st Year"
+  },
+  {
+    "id": "u008977",
+    "name": "Abheyjeet Kamboj",
+    "email": "abheyjeet@gmail.com",
+    "password": "Abheyjeet123",
+    "role": "student",
+    "department": "B.E. CSE",
+    "firstLogin": false,
+    "studentId": "STU004",
+    "year": "1st Year"
+  },
+  {
+    "id": "u009434",
+    "name": "Dr Abheyjeet Kamboj",
+    "email": "abheyjeet@gmail.com",
+    "password": "12341234",
+    "role": "teacher",
+    "department": "",
+    "firstLogin": true
+  }
+]

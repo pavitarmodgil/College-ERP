@@ -1,0 +1,405 @@
+/* ============================================================
+   University Management System — style.css  v2.0
+   Fonts: Syne (display) + Manrope (body)
+   ============================================================ */
+@import url('https://fonts.googleapis.com/css2?family=Syne:wght@400;600;700;800&family=Manrope:wght@300;400;500;600;700&display=swap');
+
+/* ── Variables ───────────────────────────────────────────── */
+:root {
+  --bg:          #f4f3ef;
+  --bg2:         #eceae5;
+  --white:       #ffffff;
+  --border:      #e0ddd7;
+  --border2:     #ccc9c2;
+  --ink:         #181714;
+  --ink2:        #3a3832;
+  --muted:       #87847c;
+  --faint:       #b5b2aa;
+
+  --admin:       #7c3aed;
+  --admin-bg:    #f5f3ff;
+  --admin-dim:   rgba(124,58,237,0.1);
+
+  --teacher:     #0369a1;
+  --teacher-bg:  #f0f9ff;
+  --teacher-dim: rgba(3,105,161,0.1);
+
+  --student:     #15803d;
+  --student-bg:  #f0fdf4;
+  --student-dim: rgba(21,128,61,0.1);
+
+  --primary:     #1d4ed8;
+  --primary-h:   #1e40af;
+  --primary-bg:  #eff3ff;
+  --primary-dim: rgba(29,78,216,0.1);
+
+  --green:       #16a34a;
+  --green-bg:    #f0fdf4;
+  --red:         #dc2626;
+  --red-bg:      #fef2f2;
+  --orange:      #ea580c;
+  --orange-bg:   #fff7ed;
+
+  --radius-sm:   6px;
+  --radius:      12px;
+  --radius-lg:   18px;
+  --radius-xl:   24px;
+
+  --shadow-sm:   0 1px 3px rgba(0,0,0,0.07);
+  --shadow:      0 4px 16px rgba(0,0,0,0.08), 0 1px 4px rgba(0,0,0,0.05);
+  --shadow-lg:   0 12px 40px rgba(0,0,0,0.12);
+  --tr:          0.2s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* ── Reset & Base ───────────────────────────────────────── */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html{scroll-behavior:smooth;-webkit-font-smoothing:antialiased}
+body{font-family:'Manrope',sans-serif;background:var(--bg);color:var(--ink);font-size:15px;line-height:1.6}
+h1,h2,h3,h4{font-family:'Syne',sans-serif;line-height:1.15}
+a{color:var(--primary);text-decoration:none;transition:color var(--tr)}
+a:hover{color:var(--primary-h)}
+
+/* ── Buttons ────────────────────────────────────────────── */
+.btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;padding:11px 22px;font-family:'Manrope',sans-serif;font-size:14px;font-weight:600;border:none;border-radius:var(--radius);cursor:pointer;transition:all var(--tr);white-space:nowrap;text-decoration:none}
+.btn-primary{background:var(--primary);color:#fff}
+.btn-primary:hover{background:var(--primary-h);color:#fff;box-shadow:0 4px 14px rgba(29,78,216,.3);transform:translateY(-1px)}
+.btn-ghost{background:transparent;color:var(--ink2);border:1.5px solid var(--border2)}
+.btn-ghost:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-dim)}
+.btn-danger{background:var(--red-bg);color:var(--red);border:1.5px solid rgba(220,38,38,.2)}
+.btn-danger:hover{background:#fee2e2}
+.btn-success{background:var(--green-bg);color:var(--green);border:1.5px solid rgba(22,163,74,.2)}
+.btn-success:hover{background:#dcfce7}
+.btn-sm{padding:7px 14px;font-size:13px}
+.btn-lg{padding:14px 28px;font-size:15px;border-radius:var(--radius-lg)}
+.btn-full{width:100%}
+.btn:disabled{opacity:.6;cursor:not-allowed;transform:none!important}
+.btn .spinner{width:15px;height:15px;border:2px solid rgba(255,255,255,.4);border-top-color:#fff;border-radius:50%;animation:spin .6s linear infinite;display:none}
+.btn.loading .spinner{display:block}
+.btn.loading .btn-text{display:none}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ── Alerts ────────────────────────────────────────────── */
+.alert{display:none;align-items:flex-start;gap:10px;padding:12px 16px;border-radius:var(--radius);font-size:13.5px;font-weight:500;margin-bottom:20px;line-height:1.5}
+.alert.show{display:flex;animation:fadeSlide .25s ease both}
+.alert-error{background:var(--red-bg);color:#b91c1c;border:1px solid rgba(220,38,38,.2)}
+.alert-success{background:var(--green-bg);color:#15803d;border:1px solid rgba(22,163,74,.2)}
+.alert-info{background:var(--primary-bg);color:var(--primary);border:1px solid rgba(29,78,216,.2)}
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* ── Inputs & Forms ────────────────────────────────────── */
+.field{margin-bottom:18px}
+.field label{display:block;font-size:13px;font-weight:600;color:var(--ink2);margin-bottom:6px}
+.input-wrap{position:relative}
+.input-wrap .input-icon{position:absolute;left:13px;top:50%;transform:translateY(-50%);font-size:15px;pointer-events:none;opacity:.4}
+input[type="text"],input[type="email"],input[type="password"],
+select,textarea{
+  width:100%;background:var(--bg);border:1.5px solid var(--border);
+  border-radius:var(--radius);padding:11px 14px 11px 40px;
+  font-size:14px;font-family:'Manrope',sans-serif;color:var(--ink);
+  outline:none;transition:border-color var(--tr),box-shadow var(--tr),background var(--tr)
+}
+select{padding-left:14px;appearance:none;cursor:pointer}
+input:focus,select:focus,textarea:focus{border-color:var(--primary);background:var(--white);box-shadow:0 0 0 3px rgba(29,78,216,.1)}
+input::placeholder,textarea::placeholder{color:var(--faint);font-size:13.5px}
+.eye-btn{position:absolute;right:12px;top:50%;transform:translateY(-50%);background:none;border:none;cursor:pointer;font-size:16px;opacity:.4;transition:opacity .2s;padding:4px}
+.eye-btn:hover{opacity:.8}
+
+/* Form grid */
+.form-grid{display:grid;grid-template-columns:1fr 1fr;gap:0 18px}
+.form-grid .field-full{grid-column:1/-1}
+
+/* ── Divider ──────────────────────────────────────────── */
+.divider{display:flex;align-items:center;gap:12px;font-size:12.5px;color:var(--faint);font-weight:500;text-transform:uppercase;letter-spacing:.05em;margin:22px 0}
+.divider::before,.divider::after{content:'';flex:1;height:1px;background:var(--border)}
+
+/* ─────────────────────────────────────────────────────────
+   LANDING PAGE — Three Role Cards
+   ──────────────────────────────────────────────────────── */
+.landing-root{min-height:100vh;display:flex;flex-direction:column}
+
+.landing-nav{display:flex;align-items:center;justify-content:space-between;padding:20px 48px;border-bottom:1px solid var(--border);background:rgba(244,243,239,.9);backdrop-filter:blur(10px);position:sticky;top:0;z-index:100}
+.nav-brand{font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:10px;text-decoration:none}
+.nav-brand span{color:var(--primary)}
+.brand-box{width:32px;height:32px;background:var(--ink);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:16px}
+
+.landing-hero{flex:1;display:flex;flex-direction:column;align-items:center;justify-content:center;padding:72px 48px 80px;text-align:center}
+
+.landing-eyebrow{display:inline-flex;align-items:center;gap:8px;background:var(--primary-bg);border:1px solid rgba(29,78,216,.2);border-radius:100px;padding:6px 16px;font-size:12.5px;font-weight:600;color:var(--primary);margin-bottom:28px}
+.eyebrow-dot{width:7px;height:7px;background:var(--primary);border-radius:50%;animation:blink 2s ease-in-out infinite}
+@keyframes blink{0%,100%{opacity:1}50%{opacity:.4}}
+
+.landing-hero h1{font-size:clamp(2.6rem,5vw,4rem);font-weight:800;color:var(--ink);max-width:720px;margin-bottom:18px;line-height:1.08}
+.landing-hero h1 em{font-style:normal;color:var(--primary)}
+.landing-hero p{font-size:16px;color:var(--muted);max-width:480px;margin:0 auto 56px;line-height:1.7}
+
+/* Role card grid */
+.role-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;width:100%;max-width:860px}
+
+.role-card{position:relative;background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius-xl);padding:36px 30px;cursor:pointer;transition:all var(--tr);text-decoration:none;display:flex;flex-direction:column;align-items:center;text-align:center;animation:roleCardIn .5s ease both;overflow:hidden}
+.role-card:nth-child(1){animation-delay:.05s}
+.role-card:nth-child(2){animation-delay:.15s}
+.role-card:nth-child(3){animation-delay:.25s}
+@keyframes roleCardIn{from{opacity:0;transform:translateY(20px)}to{opacity:1;transform:translateY(0)}}
+
+.role-card::before{content:'';position:absolute;inset:0;opacity:0;transition:opacity var(--tr);border-radius:inherit}
+.role-card:hover{transform:translateY(-4px);box-shadow:var(--shadow-lg)}
+.role-card:hover::before{opacity:1}
+
+/* Admin card */
+.role-card.admin-card{border-color:rgba(124,58,237,.25)}
+.role-card.admin-card::before{background:linear-gradient(135deg,rgba(124,58,237,.04) 0%,transparent 70%)}
+.role-card.admin-card:hover{border-color:var(--admin);box-shadow:0 12px 40px rgba(124,58,237,.15)}
+
+/* Teacher card */
+.role-card.teacher-card{border-color:rgba(3,105,161,.25)}
+.role-card.teacher-card::before{background:linear-gradient(135deg,rgba(3,105,161,.04) 0%,transparent 70%)}
+.role-card.teacher-card:hover{border-color:var(--teacher);box-shadow:0 12px 40px rgba(3,105,161,.15)}
+
+/* Student card */
+.role-card.student-card{border-color:rgba(21,128,61,.25)}
+.role-card.student-card::before{background:linear-gradient(135deg,rgba(21,128,61,.04) 0%,transparent 70%)}
+.role-card.student-card:hover{border-color:var(--student);box-shadow:0 12px 40px rgba(21,128,61,.15)}
+
+.role-icon{width:64px;height:64px;border-radius:20px;display:flex;align-items:center;justify-content:center;font-size:30px;margin-bottom:20px;transition:transform var(--tr)}
+.role-card:hover .role-icon{transform:scale(1.08)}
+.admin-icon{background:var(--admin-bg)}
+.teacher-icon{background:var(--teacher-bg)}
+.student-icon{background:var(--student-bg)}
+
+.role-card h2{font-size:1.2rem;font-weight:800;color:var(--ink);margin-bottom:8px}
+.role-card p{font-size:13.5px;color:var(--muted);line-height:1.55;margin-bottom:24px;flex:1}
+
+.role-btn{display:inline-flex;align-items:center;gap:6px;font-size:13.5px;font-weight:600;padding:9px 20px;border-radius:var(--radius);border:none;cursor:pointer;transition:all var(--tr)}
+.admin-btn{background:var(--admin-bg);color:var(--admin)}
+.admin-btn:hover{background:var(--admin);color:white}
+.teacher-btn{background:var(--teacher-bg);color:var(--teacher)}
+.teacher-btn:hover{background:var(--teacher);color:white}
+.student-btn{background:var(--student-bg);color:var(--student)}
+.student-btn:hover{background:var(--student);color:white}
+
+/* ─────────────────────────────────────────────────────────
+   AUTH PAGES — Split Layout
+   ──────────────────────────────────────────────────────── */
+.auth-root{min-height:100vh;display:grid;grid-template-columns:1fr 1fr}
+
+.auth-panel{position:relative;overflow:hidden;display:flex;flex-direction:column;justify-content:space-between;padding:44px 52px}
+.auth-panel-bg{position:absolute;inset:0;pointer-events:none}
+.auth-panel-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:40px 40px;pointer-events:none}
+
+/* Role-coloured left panels */
+.auth-panel.admin-panel{background:#1a0533}
+.auth-panel.admin-panel .auth-panel-bg{background:radial-gradient(ellipse 80% 60% at 20% 85%,rgba(124,58,237,.5) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 85% 15%,rgba(167,139,250,.15) 0%,transparent 55%)}
+
+.auth-panel.teacher-panel{background:#071e2c}
+.auth-panel.teacher-panel .auth-panel-bg{background:radial-gradient(ellipse 80% 60% at 20% 85%,rgba(3,105,161,.5) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 85% 15%,rgba(125,211,252,.12) 0%,transparent 55%)}
+
+.auth-panel.student-panel{background:#071a0e}
+.auth-panel.student-panel .auth-panel-bg{background:radial-gradient(ellipse 80% 60% at 20% 85%,rgba(21,128,61,.5) 0%,transparent 60%),radial-gradient(ellipse 50% 40% at 85% 15%,rgba(134,239,172,.12) 0%,transparent 55%)}
+
+.panel-logo{position:relative;z-index:2;font-family:'Syne',sans-serif;font-size:19px;font-weight:800;color:rgba(255,255,255,.9);display:flex;align-items:center;gap:10px;text-decoration:none}
+.panel-logo .dot{width:9px;height:9px;border-radius:50%}
+.admin-dot{background:#a78bfa}
+.teacher-dot{background:#7dd3fc}
+.student-dot{background:#86efac}
+
+.panel-body{position:relative;z-index:2}
+.panel-body h2{font-size:2.1rem;font-weight:800;color:white;line-height:1.15;margin-bottom:14px}
+.panel-body p{font-size:15px;color:rgba(255,255,255,.5);max-width:300px;line-height:1.65}
+
+.panel-features{position:relative;z-index:2;display:flex;flex-direction:column;gap:12px}
+.panel-feature{display:flex;align-items:center;gap:12px;font-size:13.5px;color:rgba(255,255,255,.55)}
+.feature-icon{width:30px;height:30px;background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.1);border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:14px;flex-shrink:0}
+
+.auth-form-side{display:flex;align-items:center;justify-content:center;padding:52px 48px;background:var(--bg);overflow-y:auto}
+.auth-form-box{width:100%;max-width:400px;animation:formIn .4s ease both}
+@keyframes formIn{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+
+/* Role accent on form side */
+.role-accent{display:inline-flex;align-items:center;gap:7px;font-size:12px;font-weight:700;letter-spacing:.08em;text-transform:uppercase;padding:5px 12px;border-radius:100px;margin-bottom:20px}
+.accent-admin{background:var(--admin-bg);color:var(--admin);border:1px solid rgba(124,58,237,.2)}
+.accent-teacher{background:var(--teacher-bg);color:var(--teacher);border:1px solid rgba(3,105,161,.2)}
+.accent-student{background:var(--student-bg);color:var(--student);border:1px solid rgba(21,128,61,.2)}
+
+.form-title{font-size:1.9rem;font-weight:800;color:var(--ink);margin-bottom:6px}
+.form-sub{font-size:14px;color:var(--muted);margin-bottom:30px}
+
+.back-home{display:inline-flex;align-items:center;gap:5px;font-size:13px;color:var(--muted);margin-top:24px;transition:color var(--tr)}
+.back-home:hover{color:var(--primary)}
+
+/* ─────────────────────────────────────────────────────────
+   DASHBOARD SHELL (shared by all roles)
+   ──────────────────────────────────────────────────────── */
+.app-root{min-height:100vh;display:flex;flex-direction:column}
+
+.topbar{height:62px;background:var(--white);border-bottom:1px solid var(--border);display:flex;align-items:center;justify-content:space-between;padding:0 32px;position:sticky;top:0;z-index:50;box-shadow:var(--shadow-sm)}
+.topbar-brand{font-family:'Syne',sans-serif;font-size:17px;font-weight:800;color:var(--ink);display:flex;align-items:center;gap:9px;text-decoration:none}
+.topbar-brand span{color:var(--primary)}
+.tb-box{width:28px;height:28px;background:var(--ink);border-radius:7px;display:flex;align-items:center;justify-content:center;font-size:13px}
+.topbar-right{display:flex;align-items:center;gap:14px}
+.topbar-user{display:flex;align-items:center;gap:10px}
+
+.avatar{display:flex;align-items:center;justify-content:center;width:34px;height:34px;border-radius:50%;font-size:13px;font-weight:700;font-family:'Syne',sans-serif;flex-shrink:0}
+.avatar-admin{background:var(--admin-bg);color:var(--admin);border:1.5px solid rgba(124,58,237,.25)}
+.avatar-teacher{background:var(--teacher-bg);color:var(--teacher);border:1.5px solid rgba(3,105,161,.25)}
+.avatar-student{background:var(--student-bg);color:var(--student);border:1.5px solid rgba(21,128,61,.25)}
+
+.user-info{display:flex;flex-direction:column}
+.user-info .uname{font-size:13.5px;font-weight:600;color:var(--ink)}
+.user-info .urole{font-size:11.5px;font-weight:600;text-transform:uppercase;letter-spacing:.05em}
+.urole-admin{color:var(--admin)}
+.urole-teacher{color:var(--teacher)}
+.urole-student{color:var(--student)}
+
+.page-body{flex:1;padding:36px 40px;max-width:1200px;margin:0 auto;width:100%}
+
+/* Welcome banner */
+.banner{border-radius:var(--radius-xl);padding:34px 44px;position:relative;overflow:hidden;margin-bottom:32px;animation:fadeSlide .4s ease both}
+.banner-bg{position:absolute;inset:0;pointer-events:none}
+.banner-grid{position:absolute;inset:0;background-image:linear-gradient(rgba(255,255,255,.025) 1px,transparent 1px),linear-gradient(90deg,rgba(255,255,255,.025) 1px,transparent 1px);background-size:36px 36px;pointer-events:none}
+.banner-inner{position:relative;z-index:2;display:flex;align-items:center;justify-content:space-between;gap:16px}
+.banner h1{font-size:1.8rem;font-weight:800;color:white;margin-bottom:5px}
+.banner h1 em{font-style:normal}
+.banner p{font-size:14px;color:rgba(255,255,255,.5)}
+.banner-emoji{font-size:3rem;opacity:.75;flex-shrink:0}
+
+.banner-admin  {background:#1a0533}
+.banner-admin  .banner-bg{background:radial-gradient(ellipse 60% 80% at 90% 50%,rgba(124,58,237,.45) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 10% 20%,rgba(167,139,250,.15) 0%,transparent 50%)}
+.banner h1 em.c-admin{color:#c4b5fd}
+.banner-teacher{background:#071e2c}
+.banner-teacher .banner-bg{background:radial-gradient(ellipse 60% 80% at 90% 50%,rgba(3,105,161,.5) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 10% 20%,rgba(125,211,252,.12) 0%,transparent 50%)}
+.banner h1 em.c-teacher{color:#7dd3fc}
+.banner-student{background:#071a0e}
+.banner-student .banner-bg{background:radial-gradient(ellipse 60% 80% at 90% 50%,rgba(21,128,61,.5) 0%,transparent 60%),radial-gradient(ellipse 40% 60% at 10% 20%,rgba(134,239,172,.12) 0%,transparent 50%)}
+.banner h1 em.c-student{color:#86efac}
+
+@keyframes fadeSlide{from{opacity:0;transform:translateY(-6px)}to{opacity:1;transform:translateY(0)}}
+
+/* Stat cards */
+.stat-row{display:grid;gap:16px;margin-bottom:28px}
+.cols-4{grid-template-columns:repeat(4,1fr)}
+.cols-3{grid-template-columns:repeat(3,1fr)}
+.cols-2{grid-template-columns:repeat(2,1fr)}
+
+.scard{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px 24px;box-shadow:var(--shadow-sm);transition:box-shadow var(--tr),transform var(--tr);animation:cardUp .4s ease both}
+.scard:hover{box-shadow:var(--shadow);transform:translateY(-2px)}
+.scard:nth-child(1){animation-delay:.05s}
+.scard:nth-child(2){animation-delay:.1s}
+.scard:nth-child(3){animation-delay:.15s}
+.scard:nth-child(4){animation-delay:.2s}
+@keyframes cardUp{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:translateY(0)}}
+.scard-icon{width:42px;height:42px;border-radius:11px;display:flex;align-items:center;justify-content:center;font-size:20px;margin-bottom:14px}
+.scard-num{font-family:'Syne',sans-serif;font-size:26px;font-weight:800;color:var(--ink);line-height:1}
+.scard-label{font-size:12.5px;color:var(--muted);font-weight:500;margin-top:4px}
+.scard-chip{display:inline-flex;align-items:center;font-size:11.5px;font-weight:600;padding:2px 8px;border-radius:100px;margin-top:10px}
+
+/* Section header */
+.sec-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:16px}
+.sec-title{font-family:'Syne',sans-serif;font-size:16px;font-weight:700;color:var(--ink)}
+
+/* Quick action cards */
+.action-row{display:grid;gap:14px;margin-bottom:28px}
+.acard{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:22px;cursor:pointer;transition:all var(--tr);text-decoration:none;display:flex;align-items:flex-start;gap:16px;animation:cardUp .45s .2s ease both}
+.acard:hover{transform:translateY(-2px);box-shadow:var(--shadow)}
+.acard-icon{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:22px;flex-shrink:0;transition:transform var(--tr)}
+.acard:hover .acard-icon{transform:scale(1.08)}
+.acard-body h3{font-size:14.5px;font-weight:700;color:var(--ink);margin-bottom:4px}
+.acard-body p{font-size:13px;color:var(--muted)}
+.acard-arrow{margin-left:auto;font-size:18px;color:var(--faint);align-self:center;transition:transform var(--tr)}
+.acard:hover .acard-arrow{transform:translateX(3px);color:var(--primary)}
+
+/* Admin card hover tints */
+.acard.admin-acard:hover{border-color:var(--admin);background:rgba(124,58,237,.02)}
+.acard.teacher-acard:hover{border-color:var(--teacher);background:rgba(3,105,161,.02)}
+.acard.student-acard:hover{border-color:var(--student);background:rgba(21,128,61,.02)}
+
+/* ─────────────────────────────────────────────────────────
+   CREATE USER FORM
+   ──────────────────────────────────────────────────────── */
+.form-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);padding:32px;box-shadow:var(--shadow-sm);animation:cardUp .4s ease both;max-width:640px}
+.form-card-title{font-size:1.2rem;font-weight:800;color:var(--ink);margin-bottom:6px}
+.form-card-sub{font-size:13.5px;color:var(--muted);margin-bottom:28px}
+.role-select-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.role-option{border:1.5px solid var(--border);border-radius:var(--radius);padding:14px 16px;cursor:pointer;transition:all var(--tr);display:flex;align-items:center;gap:12px}
+.role-option input[type="radio"]{display:none}
+.role-option:hover{border-color:var(--border2)}
+.role-option.selected-teacher{border-color:var(--teacher);background:var(--teacher-bg)}
+.role-option.selected-student{border-color:var(--student);background:var(--student-bg)}
+.ro-icon{font-size:20px}
+.ro-label{font-size:13.5px;font-weight:600;color:var(--ink)}
+.ro-desc{font-size:12px;color:var(--muted)}
+
+/* Dynamic student fields */
+.student-fields{display:none}
+.student-fields.visible{display:contents}
+
+/* ─────────────────────────────────────────────────────────
+   DATA TABLES (view-users, view-students)
+   ──────────────────────────────────────────────────────── */
+.table-shell{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-lg);overflow:hidden;box-shadow:var(--shadow-sm);animation:cardUp .4s .1s ease both}
+.table-head{display:flex;align-items:center;justify-content:space-between;padding:16px 22px;border-bottom:1px solid var(--border);background:var(--bg)}
+.t-search{display:flex;align-items:center;gap:8px;background:var(--white);border:1.5px solid var(--border);border-radius:var(--radius);padding:7px 13px;min-width:220px}
+.t-search input{background:none;border:none;outline:none;font-size:13.5px;font-family:'Manrope',sans-serif;color:var(--ink);width:100%;padding:0}
+.t-search input:focus{box-shadow:none;border:none;background:none}
+.t-count{font-size:13px;color:var(--muted);font-weight:500}
+
+table.data-table{width:100%;border-collapse:collapse;font-size:14px}
+table.data-table thead{background:var(--bg)}
+table.data-table th{text-align:left;padding:12px 20px;font-size:11.5px;font-weight:700;letter-spacing:.07em;text-transform:uppercase;color:var(--muted);border-bottom:1px solid var(--border)}
+table.data-table td{padding:14px 20px;border-bottom:1px solid var(--border);color:var(--ink);vertical-align:middle}
+table.data-table tbody tr:last-child td{border-bottom:none}
+table.data-table tbody tr{transition:background var(--tr)}
+table.data-table tbody tr:hover td{background:var(--bg)}
+
+.cell-user{display:flex;align-items:center;gap:12px}
+.cell-sub{font-size:12.5px;color:var(--muted);margin-top:2px}
+
+.tag{display:inline-flex;align-items:center;gap:4px;font-size:12px;font-weight:600;padding:3px 10px;border-radius:100px;white-space:nowrap}
+.tag-admin  {background:var(--admin-bg);  color:var(--admin)}
+.tag-teacher{background:var(--teacher-bg);color:var(--teacher)}
+.tag-student{background:var(--student-bg);color:var(--student)}
+.tag-yes{background:var(--orange-bg);color:var(--orange)}
+.tag-no {background:var(--green-bg); color:var(--green)}
+
+.id-tag{font-family:monospace;font-size:12.5px;font-weight:600;background:var(--bg);border:1.5px solid var(--border2);border-radius:var(--radius-sm);padding:3px 9px;color:var(--ink2)}
+
+/* ─────────────────────────────────────────────────────────
+   RESET PASSWORD PAGE
+   ──────────────────────────────────────────────────────── */
+.reset-root{min-height:100vh;display:flex;align-items:center;justify-content:center;padding:32px;background:var(--bg)}
+.reset-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-xl);padding:40px 44px;width:100%;max-width:440px;box-shadow:var(--shadow-lg);animation:formIn .4s ease both}
+.reset-icon{font-size:2.8rem;margin-bottom:16px;display:block}
+.reset-notice{background:var(--orange-bg);border:1px solid rgba(234,88,12,.2);border-radius:var(--radius);padding:12px 16px;font-size:13.5px;color:var(--orange);margin-bottom:24px;display:flex;align-items:flex-start;gap:8px;line-height:1.5}
+
+/* ─────────────────────────────────────────────────────────
+   STUDENT PROFILE CARD
+   ──────────────────────────────────────────────────────── */
+.profile-card{background:var(--white);border:1px solid var(--border);border-radius:var(--radius-xl);padding:32px;display:flex;gap:28px;align-items:flex-start;animation:cardUp .4s ease both;margin-bottom:24px;box-shadow:var(--shadow-sm)}
+.profile-avatar{width:80px;height:80px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:28px;font-weight:800;font-family:'Syne',sans-serif;flex-shrink:0}
+.profile-info h2{font-size:1.5rem;font-weight:800;color:var(--ink);margin-bottom:6px}
+.profile-meta{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+.meta-item{display:flex;align-items:center;gap:6px;font-size:13px;color:var(--muted);background:var(--bg);padding:5px 12px;border-radius:100px;border:1px solid var(--border)}
+.meta-item strong{color:var(--ink2);font-weight:600}
+
+/* ─────────────────────────────────────────────────────────
+   RESPONSIVE
+   ──────────────────────────────────────────────────────── */
+@media(max-width:900px){
+  .auth-root{grid-template-columns:1fr}
+  .auth-panel{display:none}
+  .auth-form-side{padding:32px 24px}
+  .role-grid{grid-template-columns:1fr}
+  .landing-nav{padding:16px 24px}
+  .landing-hero{padding:48px 24px 64px}
+  .page-body{padding:24px 20px}
+  .topbar{padding:0 20px}
+  .banner{padding:26px 28px}
+  .cols-4,.cols-3{grid-template-columns:repeat(2,1fr)}
+  .form-grid{grid-template-columns:1fr}
+}
+@media(max-width:560px){
+  .cols-4,.cols-3,.cols-2{grid-template-columns:1fr 1fr}
+  .role-select-row{grid-template-columns:1fr}
+  .banner-inner{flex-direction:column;align-items:flex-start}
+  .banner-emoji{display:none}
+  .profile-card{flex-direction:column;align-items:center;text-align:center}
+}

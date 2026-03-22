@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Login — ScholarGate</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="auth-root">
+
+  <!-- Left Branding Panel -->
+  <div class="auth-left">
+    <div class="auth-left-bg"></div>
+    <div class="auth-left-grid"></div>
+
+    <a href="/" class="auth-left-logo">
+      <div class="logo-dot"></div>
+      ScholarGate
+    </a>
+
+    <div class="auth-left-body">
+      <h2>Welcome<br/><span>back</span></h2>
+      <p>Log in to access your dashboard, view the student directory, and pick up where you left off.</p>
+    </div>
+
+    <div class="auth-features">
+      <div class="auth-feature">
+        <div class="auth-feature-icon">🛡️</div>
+        Credentials validated from users.json
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon">📊</div>
+        Full dashboard on login
+      </div>
+      <div class="auth-feature">
+        <div class="auth-feature-icon">👥</div>
+        Access the student directory
+      </div>
+    </div>
+  </div>
+
+  <!-- Right Form Panel -->
+  <div class="auth-right">
+    <div class="auth-form-box">
+
+      <div class="auth-header">
+        <h1>Sign in</h1>
+        <p>Enter your credentials to continue</p>
+      </div>
+
+      <!-- Alert Box (also used for "please log in" message) -->
+      <div id="alertMsg" class="alert" role="alert"></div>
+
+      <!-- Login Form -->
+      <form id="loginForm" novalidate>
+
+        <div class="field">
+          <label for="email">Email Address</label>
+          <div class="input-wrap">
+            <span class="input-icon">✉️</span>
+            <input type="email" id="email" name="email" placeholder="you@college.edu" autocomplete="email"/>
+          </div>
+        </div>
+
+        <div class="field">
+          <label for="password">Password</label>
+          <div class="input-wrap">
+            <span class="input-icon">🔑</span>
+            <input type="password" id="password" name="password" placeholder="Your password" autocomplete="current-password"/>
+            <button type="button" class="eye-btn" data-target="password">👁️</button>
+          </div>
+        </div>
+
+        <button type="submit" class="btn btn-primary btn-full" id="submitBtn" style="margin-top:8px">
+          <span class="btn-text">Sign In →</span>
+          <div class="spinner"></div>
+        </button>
+
+      </form>
+
+      <div class="divider">or</div>
+
+      <a href="/signup" class="btn btn-ghost btn-full">Create a new account</a>
+
+      <div class="auth-footer" style="margin-top:20px">
+        <a href="/" style="color:var(--muted);font-size:13px">← Back to Home</a>
+      </div>
+
+    </div>
+  </div>
+
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>

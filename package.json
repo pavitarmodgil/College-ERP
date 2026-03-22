@@ -1,0 +1,15 @@
+{
+  "name": "university-management-system",
+  "version": "2.0.0",
+  "description": "Role-based University Management System using Node.js + Express + JSON",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "author": "Student",
+  "license": "ISC",
+  "dependencies": {
+    "express": "^4.22.1",
+    "express-session": "^1.19.0"
+  }
+}

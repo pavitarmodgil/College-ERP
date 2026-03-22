@@ -1,0 +1,247 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Students — ScholarGate</title>
+  <link rel="stylesheet" href="/css/style.css"/>
+</head>
+<body>
+<div class="students-root">
+
+  <!-- Top Navigation Bar -->
+  <header class="dash-topbar">
+    <a href="/" class="topbar-logo">
+      <div class="topbar-box">🎓</div>
+      Scholar<span>Gate</span>
+    </a>
+    <div class="topbar-right">
+      <div class="topbar-user">
+        <div class="user-avatar">?</div>
+        <span class="dash-user-name" style="font-size:13.5px;font-weight:600;color:var(--ink2)">Loading…</span>
+      </div>
+      <a href="/dashboard" class="btn btn-ghost btn-sm">Dashboard</a>
+      <button class="btn btn-danger btn-sm" id="logoutBtn">Logout</button>
+    </div>
+  </header>
+
+  <!-- Main Content -->
+  <main class="students-content">
+
+    <!-- Back Nav -->
+    <a href="/dashboard" class="back-nav">← Back to Dashboard</a>
+
+    <!-- Page Header -->
+    <div class="page-header">
+      <h1>Student Directory</h1>
+      <p>All students currently enrolled this semester — 8 records</p>
+    </div>
+
+    <!-- Table with search header -->
+    <div class="table-top">
+      <div class="table-search">
+        <span>🔍</span>
+        <input type="text" id="tableSearch" placeholder="Search by name, branch, roll no…"/>
+      </div>
+      <span class="table-count" id="tableCount">8 students</span>
+    </div>
+
+    <div class="table-wrap">
+      <table class="s-table" id="studentsTable">
+        <thead>
+          <tr>
+            <th>Student</th>
+            <th>Roll No.</th>
+            <th>Department</th>
+            <th>Year</th>
+            <th>Grade</th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#eff3ff;color:#1d4ed8">RS</div>
+                <div>
+                  <div>Rahul Sharma</div>
+                  <div class="s-email">rahul.sharma@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">CS2201</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#1d4ed8"></div>
+                Computer Science
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-a">A</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#f0fdf4;color:#16a34a">PK</div>
+                <div>
+                  <div>Priya Kapoor</div>
+                  <div class="s-email">priya.kapoor@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">EC2205</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#16a34a"></div>
+                Electronics
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-ap">A+</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#fff7ed;color:#ea580c">AM</div>
+                <div>
+                  <div>Arjun Mehta</div>
+                  <div class="s-email">arjun.mehta@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">ME2210</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#ea580c"></div>
+                Mechanical
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-bp">B+</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#eff3ff;color:#1d4ed8">SN</div>
+                <div>
+                  <div>Sneha Nair</div>
+                  <div class="s-email">sneha.nair@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">CS2214</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#1d4ed8"></div>
+                Computer Science
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-a">A</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#fef2f2;color:#dc2626">VR</div>
+                <div>
+                  <div>Vikram Rao</div>
+                  <div class="s-email">vikram.rao@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">CE2203</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#7c3aed"></div>
+                Civil Engineering
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-b">B</span></td>
+            <td><span class="s-status status-inactive">● On Leave</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#f0fdf4;color:#16a34a">AD</div>
+                <div>
+                  <div>Ananya Desai</div>
+                  <div class="s-email">ananya.desai@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">IT2208</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#0891b2"></div>
+                Information Tech
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">3rd Year</td>
+            <td><span class="grade-tag g-ap">A+</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#fff7ed;color:#ea580c">KP</div>
+                <div>
+                  <div>Kiran Patil</div>
+                  <div class="s-email">kiran.patil@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">ME2217</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#ea580c"></div>
+                Mechanical
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">2nd Year</td>
+            <td><span class="grade-tag g-c">C+</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+          <tr>
+            <td>
+              <div class="s-name-cell">
+                <div class="s-avatar" style="background:#eff3ff;color:#1d4ed8">RG</div>
+                <div>
+                  <div>Rohan Gupta</div>
+                  <div class="s-email">rohan.gupta@college.edu</div>
+                </div>
+              </div>
+            </td>
+            <td><span class="roll-tag">CS2222</span></td>
+            <td>
+              <div class="dept-badge">
+                <div class="dept-dot" style="background:#1d4ed8"></div>
+                Computer Science
+              </div>
+            </td>
+            <td style="color:var(--muted);font-size:13px">2nd Year</td>
+            <td><span class="grade-tag g-bp">B+</span></td>
+            <td><span class="s-status status-active">● Active</span></td>
+          </tr>
+
+        </tbody>
+      </table>
+    </div>
+
+  </main>
+</div>
+<script src="/js/script.js"></script>
+</body>
+</html>
