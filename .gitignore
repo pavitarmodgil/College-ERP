@@ -21,5 +21,6 @@ Thumbs.db
 client/dist/
 client/node_modules/
 
-# Prisma generated client (for future Phase 1)
-server/prisma/generated/
+# Prisma generated client (Prisma 5 — lives in node_modules, no extra entry needed)
+# Migrations ARE committed — they are permanent history
+

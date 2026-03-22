@@ -1,0 +1,120 @@
+// ─────────────────────────────────────────────────────────────
+//  University Management System — Prisma Schema
+//  Phase 1: Database Architecture
+//  Provider: MySQL
+// ─────────────────────────────────────────────────────────────
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "mysql"
+  url      = env("DATABASE_URL")
+}
+
+// ── Enums ─────────────────────────────────────────────────────
+
+enum Role {
+  ADMIN
+  TEACHER
+  STUDENT
+}
+
+enum CourseType {
+  MANDATORY
+  ELECTIVE
+}
+
+enum GradeComponent {
+  INTERNAL
+  MID_TERM
+  FINAL
+}
+
+// ── Models ────────────────────────────────────────────────────
+
+model Department {
+  id        Int      @id @default(autoincrement())
+  name      String
+  code      String   @unique
+  users     User[]
+  courses   Course[]
+  createdAt DateTime @default(now())
+}
+
+model User {
+  id                Int             @id @default(autoincrement())
+  email             String          @unique
+  password          String
+  role              Role
+  studentId         String?         @unique   // STU001, STU002...
+  teacherId         String?         @unique   // TCH001, TCH002...
+  mustResetPassword Boolean         @default(false)
+  isActive          Boolean         @default(true)
+  department        Department?     @relation(fields: [departmentId], references: [id])
+  departmentId      Int?
+  enrollments       Enrollment[]
+  taughtCourses     CourseTeacher[]
+  createdAt         DateTime        @default(now())
+  updatedAt         DateTime        @updatedAt
+}
+
+model Course {
+  id           Int             @id @default(autoincrement())
+  name         String
+  code         String          @unique
+  type         CourseType
+  credits      Int             @default(3)
+  department   Department      @relation(fields: [departmentId], references: [id])
+  departmentId Int
+  enrollments  Enrollment[]
+  teachers     CourseTeacher[]
+  createdAt    DateTime        @default(now())
+}
+
+model Enrollment {
+  id         Int          @id @default(autoincrement())
+  user       User         @relation(fields: [userId], references: [id])
+  userId     Int
+  course     Course       @relation(fields: [courseId], references: [id])
+  courseId   Int
+  enrolledAt DateTime     @default(now())
+  attendance Attendance[]
+  grades     Grade[]
+
+  @@unique([userId, courseId])  // a student can only enroll once per course
+}
+
+model CourseTeacher {
+  id       Int    @id @default(autoincrement())
+  course   Course @relation(fields: [courseId], references: [id])
+  courseId Int
+  teacher  User   @relation(fields: [userId], references: [id])
+  userId   Int
+
+  @@unique([courseId, userId])  // a teacher can only be assigned once per course
+}
+
+model Attendance {
+  id           Int        @id @default(autoincrement())
+  enrollment   Enrollment @relation(fields: [enrollmentId], references: [id])
+  enrollmentId Int
+  date         DateTime   @db.Date
+  present      Boolean
+  createdAt    DateTime   @default(now())
+
+  @@unique([enrollmentId, date])  // one attendance record per student per course per day
+}
+
+model Grade {
+  id           Int            @id @default(autoincrement())
+  enrollment   Enrollment     @relation(fields: [enrollmentId], references: [id])
+  enrollmentId Int
+  marks        Float
+  letterGrade  String
+  component    GradeComponent
+  createdAt    DateTime       @default(now())
+
+  @@unique([enrollmentId, component])  // one grade per component per enrollment
+}
