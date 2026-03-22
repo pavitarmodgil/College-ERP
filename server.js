@@ -4,13 +4,16 @@
 //  Roles: Admin | Teacher | Student
 // ============================================================
 
+require("dotenv").config();
+
 const express = require("express");
 const session = require("express-session");
+const bcrypt  = require("bcrypt");
 const fs      = require("fs");
 const path    = require("path");
 
 const app  = express();
-const PORT = 3000;
+const PORT = process.env.PORT || 3000;
 const USERS_FILE = path.join(__dirname, "users.json");
 
 // ── Middleware ───────────────────────────────────────────────
@@ -20,7 +23,7 @@ app.use(express.static(path.join(__dirname, "public")));
 
 // Session middleware — stores role + userId server-side
 app.use(session({
-  secret: "ums-secret-key-2024",   // change in production
+  secret: process.env.SESSION_SECRET,
   resave: false,
   saveUninitialized: false,
   cookie: { maxAge: 1000 * 60 * 60 } // 1 hour
@@ -109,7 +112,7 @@ app.get("/api/session", (req, res) => {
 // ─────────────────────────────────────────────────────────────
 //  POST /admin-login
 // ─────────────────────────────────────────────────────────────
-app.post("/admin-login", (req, res) => {
+app.post("/admin-login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, message: "Email and password are required." });
@@ -124,7 +127,9 @@ app.post("/admin-login", (req, res) => {
       message: "You are not registered in the system. Please contact administration."
     });
   }
-  if (user.password !== password) {
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
     return res.status(401).json({ success: false, message: "Incorrect password." });
   }
 
@@ -137,7 +142,7 @@ app.post("/admin-login", (req, res) => {
 // ─────────────────────────────────────────────────────────────
 //  POST /teacher-login
 // ─────────────────────────────────────────────────────────────
-app.post("/teacher-login", (req, res) => {
+app.post("/teacher-login", async (req, res) => {
   const { email, password } = req.body;
   if (!email || !password) {
     return res.status(400).json({ success: false, message: "Email and password are required." });
@@ -152,7 +157,9 @@ app.post("/teacher-login", (req, res) => {
       message: "You are not registered in the system. Please contact administration."
     });
   }
-  if (user.password !== password) {
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
     return res.status(401).json({ success: false, message: "Incorrect password." });
   }
 
@@ -167,7 +174,7 @@ app.post("/teacher-login", (req, res) => {
 // ─────────────────────────────────────────────────────────────
 //  POST /student-login  (email OR studentId)
 // ─────────────────────────────────────────────────────────────
-app.post("/student-login", (req, res) => {
+app.post("/student-login", async (req, res) => {
   const { identifier, password } = req.body; // identifier = email or studentId
   if (!identifier || !password) {
     return res.status(400).json({ success: false, message: "Student ID / Email and password are required." });
@@ -186,7 +193,9 @@ app.post("/student-login", (req, res) => {
       message: "You are not registered in the system. Please contact administration."
     });
   }
-  if (user.password !== password) {
+
+  const passwordMatch = await bcrypt.compare(password, user.password);
+  if (!passwordMatch) {
     return res.status(401).json({ success: false, message: "Incorrect password." });
   }
 
@@ -202,7 +211,7 @@ app.post("/student-login", (req, res) => {
 // ─────────────────────────────────────────────────────────────
 //  POST /reset-password
 // ─────────────────────────────────────────────────────────────
-app.post("/reset-password", (req, res) => {
+app.post("/reset-password", async (req, res) => {
   if (!req.session.user) {
     return res.status(401).json({ success: false, message: "Not authenticated." });
   }
@@ -226,8 +235,8 @@ app.post("/reset-password", (req, res) => {
     return res.status(404).json({ success: false, message: "User not found." });
   }
 
-  // Update password and mark first login as done
-  users[idx].password   = newPassword;
+  // Hash the new password before storing (saltRounds=12 per project convention)
+  users[idx].password   = await bcrypt.hash(newPassword, 12);
   users[idx].firstLogin = false;
   writeUsers(users);
 
@@ -238,7 +247,7 @@ app.post("/reset-password", (req, res) => {
 // ─────────────────────────────────────────────────────────────
 //  POST /create-user  (admin only — server enforces)
 // ─────────────────────────────────────────────────────────────
-app.post("/create-user", (req, res) => {
+app.post("/create-user", async (req, res) => {
   // Server-side role check
   if (!req.session.user || req.session.user.role !== "admin") {
     return res.status(403).json({ success: false, message: "Access denied." });
@@ -261,12 +270,15 @@ app.post("/create-user", (req, res) => {
     return res.status(409).json({ success: false, message: "A user with this email already exists." });
   }
 
+  // Hash password before storing (saltRounds=12 per project convention)
+  const hashedPassword = await bcrypt.hash(password, 12);
+
   // Build new user object
   const newUser = {
     id:         generateId(users),
     name:       name.trim(),
     email:      email.trim().toLowerCase(),
-    password,
+    password:   hashedPassword,
     role,
     department: department || "",
     firstLogin: true
