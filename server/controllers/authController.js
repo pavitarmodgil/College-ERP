@@ -46,15 +46,18 @@ async function login(req, res, next) {
       return res.status(400).json({ error: 'identifier, password and captchaToken are required' })
     }
 
-    // 1. Verify hCaptcha
-    const captchaRes = await fetch('https://hcaptcha.com/siteverify', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
-      body: `secret=${process.env.HCAPTCHA_SECRET}&response=${captchaToken}`,
-    })
-    const captchaData = await captchaRes.json()
-    if (!captchaData.success) {
-      return res.status(400).json({ error: 'CAPTCHA verification failed' })
+    // 1. Verify hCaptcha (skip in development with bypass token)
+    const isDevBypass = process.env.NODE_ENV === 'development' && captchaToken === 'dev-bypass'
+    if (!isDevBypass) {
+      const captchaRes = await fetch('https://hcaptcha.com/siteverify', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/x-www-form-urlencoded' },
+        body: `secret=${process.env.HCAPTCHA_SECRET}&response=${captchaToken}`,
+      })
+      const captchaData = await captchaRes.json()
+      if (!captchaData.success) {
+        return res.status(400).json({ error: 'CAPTCHA verification failed' })
+      }
     }
 
     // 2. Find user

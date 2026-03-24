@@ -2,9 +2,12 @@
   "name": "university-management-system",
   "version": "2.0.0",
   "description": "Role-based University Management System using Node.js + Express + JSON",
-  "main": "server.js",
+  "main": "server/index.js",
   "scripts": {
-    "start": "node server.js"
+    "server": "node server/index.js",
+    "client": "cd client && npm run dev",
+    "dev": "concurrently \"npm run server\" \"npm run client\"",
+    "start": "node server/index.js"
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -25,5 +28,8 @@
     "jsonwebtoken": "^9.0.3",
     "nodemailer": "^8.0.3",
     "prisma": "^5.22.0"
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
   }
 }
