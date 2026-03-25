@@ -2,11 +2,18 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "UMS Express Server",
+      "name": "UMS API Server",
       "runtimeExecutable": "node",
-      "runtimeArgs": ["server.js"],
-      "port": 3000,
+      "runtimeArgs": ["server/index.js"],
+      "port": 4000,
       "autoPort": true
+    },
+    {
+      "name": "UMS React Client",
+      "runtimeExecutable": "node",
+      "runtimeArgs": ["node_modules/vite/bin/vite.js", "--port", "5173"],
+      "cwd": "client",
+      "port": 5173
     }
   ]
 }

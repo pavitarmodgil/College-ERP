@@ -1,0 +1,75 @@
+import axios from 'axios'
+
+const api = axios.create({
+  baseURL: import.meta.env.VITE_API_URL,
+  withCredentials: true, // sends httpOnly refresh cookie automatically
+})
+
+// Request interceptor — attach JWT to every request
+api.interceptors.request.use((config) => {
+  const token = localStorage.getItem('accessToken')
+  if (token) {
+    config.headers.Authorization = `Bearer ${token}`
+  }
+  return config
+})
+
+// Response interceptor — on 401, try refresh then retry original request
+let isRefreshing = false
+let failedQueue = []
+
+const processQueue = (error, token = null) => {
+  failedQueue.forEach((prom) => {
+    if (error) prom.reject(error)
+    else prom.resolve(token)
+  })
+  failedQueue = []
+}
+
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config
+
+    // Skip refresh logic for auth endpoints — 401 there means wrong credentials, not expired token
+    const isAuthEndpoint = originalRequest.url?.includes('/auth/')
+    if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
+      if (isRefreshing) {
+        return new Promise((resolve, reject) => {
+          failedQueue.push({ resolve, reject })
+        })
+          .then((token) => {
+            originalRequest.headers.Authorization = `Bearer ${token}`
+            return api(originalRequest)
+          })
+          .catch((err) => Promise.reject(err))
+      }
+
+      originalRequest._retry = true
+      isRefreshing = true
+
+      try {
+        const { data } = await axios.post(
+          `${import.meta.env.VITE_API_URL}/auth/refresh`,
+          {},
+          { withCredentials: true }
+        )
+        localStorage.setItem('accessToken', data.accessToken)
+        processQueue(null, data.accessToken)
+        originalRequest.headers.Authorization = `Bearer ${data.accessToken}`
+        return api(originalRequest)
+      } catch (refreshError) {
+        processQueue(refreshError, null)
+        localStorage.removeItem('accessToken')
+        window.location.href = '/'
+        return Promise.reject(refreshError)
+      } finally {
+        isRefreshing = false
+      }
+    }
+
+    return Promise.reject(error)
+  }
+)
+
+export default api
