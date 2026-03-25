@@ -66,10 +66,10 @@ Roles: Student, Teacher, Admin, HOD, Principal.
 ## Current Phase
 > Update this section as you progress.
  
-- [ ] Phase 0 — Foundation (Git Flow, .env, bcrypt fix)
-- [ ] Phase 1 — Database Architecture (Prisma schema design)
-- [ ] Phase 2 — Authentication (JWT + OTP + Redis + CAPTCHA)
-- [ ] Phase 3 — Frontend Upgrade (Vite + React + Tailwind)
+- [x] Phase 0 — Foundation (Git Flow, .env, bcrypt fix)
+- [x] Phase 1 — Database Architecture (Prisma schema design)
+- [x] Phase 2 — Authentication (JWT + OTP + Redis + CAPTCHA)
+- [x] Phase 3 — Frontend Upgrade (Vite + React + Tailwind)
 - [ ] Phase 4 — Features (timetable, grades, attendance, announcements)
 - [ ] Phase 5 — Deploy (Docker + GitHub Actions)
  
