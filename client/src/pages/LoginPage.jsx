@@ -3,8 +3,6 @@ import { useNavigate } from 'react-router-dom'
 import HCaptcha from '@hcaptcha/react-hcaptcha'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
-import ThemeToggle from '../components/ThemeToggle'
-import { GraduationCap, ClipboardList, BarChart3, Shield } from 'lucide-react'
 
 const isDev = import.meta.env.DEV
 
@@ -17,14 +15,15 @@ export default function LoginPage() {
   const [identifier, setIdentifier] = useState('')
   const [password, setPassword] = useState('')
   const [captchaToken, setCaptchaToken] = useState(isDev ? 'dev-bypass' : '')
-  const [otp, setOtp] = useState('')
-  const [email, setEmail] = useState('') // masked email returned by API
+  const [otp, setOtp] = useState(['', '', '', '', '', ''])
+  const [maskedEmail, setMaskedEmail] = useState('')   // display only
+  const [resolvedEmail, setResolvedEmail] = useState('') // real email for OTP verify
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+  const otpRefs = useRef([])
 
   const ROLE_ROUTES = { ADMIN: '/admin', TEACHER: '/teacher', STUDENT: '/student' }
 
-  // In dev mode, auto-set bypass token
   useEffect(() => {
     if (isDev) setCaptchaToken('dev-bypass')
   }, [])
@@ -38,12 +37,9 @@ export default function LoginPage() {
     setError('')
     setLoading(true)
     try {
-      const { data } = await api.post('/auth/login', {
-        identifier,
-        password,
-        captchaToken,
-      })
-      setEmail(data.email)
+      const { data } = await api.post('/auth/login', { identifier, password, captchaToken })
+      setMaskedEmail(data.email)           // e.g. "ad***@uni.com" — shown in UI
+      setResolvedEmail(data.lookupEmail)   // e.g. "admin@uni.com" — used for OTP lookup
       setStep('otp')
     } catch (err) {
       setError(err.response?.data?.error || 'Login failed')
@@ -58,12 +54,14 @@ export default function LoginPage() {
 
   async function handleOTP(e) {
     e.preventDefault()
+    const otpString = otp.join('')
+    if (otpString.length !== 6) return
     setError('')
     setLoading(true)
     try {
       const { data } = await api.post('/auth/verify-otp', {
-        email: identifier.includes('@') ? identifier : email,
-        otp,
+        email: resolvedEmail, // always the real email — works for both email and STU/TCH id logins
+        otp: otpString,
       })
       login(data.accessToken, data.user)
       if (data.user.mustResetPassword) {
@@ -78,168 +76,276 @@ export default function LoginPage() {
     }
   }
 
-  const features = [
-    { icon: ClipboardList, text: 'Attendance tracking' },
-    { icon: BarChart3, text: 'Grade management' },
-    { icon: Shield, text: 'Role-based access' },
-  ]
+  function handleOtpChange(index, value) {
+    if (!/^\d*$/.test(value)) return
+    const newOtp = [...otp]
+    newOtp[index] = value.slice(-1)
+    setOtp(newOtp)
+    if (value && index < 5) otpRefs.current[index + 1]?.focus()
+  }
+
+  function handleOtpKeyDown(index, e) {
+    if (e.key === 'Backspace' && !otp[index] && index > 0) {
+      otpRefs.current[index - 1]?.focus()
+    }
+  }
 
   return (
-    <div className="min-h-screen flex bg-gray-50 dark:bg-gray-950">
-      {/* Theme toggle — fixed top-right */}
-      <div className="fixed top-4 right-4 z-50">
-        <ThemeToggle />
-      </div>
+    <main className="flex min-h-screen font-body bg-surface text-on-surface antialiased overflow-hidden">
+      {/* Left Panel — Signature Gradient */}
+      <section className="hidden lg:flex w-1/2 relative items-center justify-center overflow-hidden bg-gradient-to-br from-[#3525cd] to-[#4f46e5]">
+        {/* Decorative SVG geometry */}
+        <div className="absolute inset-0 opacity-20">
+          <svg width="100%" height="100%" viewBox="0 0 800 800" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="400" cy="400" r="300" fill="none" stroke="white" strokeWidth="2" />
+            <circle cx="400" cy="400" r="200" fill="none" stroke="white" strokeWidth="1" />
+            <rect
+              x="200" y="200" width="400" height="400"
+              fill="none" stroke="white" strokeWidth="1"
+              transform="rotate(45 400 400)"
+            />
+          </svg>
+        </div>
 
-      {/* Left panel — branding (hidden on mobile) */}
-      <div className="hidden lg:flex lg:w-1/2 relative overflow-hidden bg-gradient-to-br from-[#3525cd] to-indigo-600">
-        {/* Decorative circles */}
-        <div className="absolute -top-24 -left-24 w-96 h-96 rounded-full bg-white/5" />
-        <div className="absolute -bottom-32 -right-32 w-[500px] h-[500px] rounded-full bg-white/5" />
-        <div className="absolute top-1/3 right-16 w-48 h-48 rounded-full bg-white/5" />
+        {/* Content */}
+        <div className="relative z-10 p-16 w-full max-w-2xl">
+          <div className="mb-12">
+            <h1 className="font-headline text-6xl font-extrabold text-white tracking-tight leading-tight">
+              College ERP
+            </h1>
+            <p className="mt-4 text-on-primary-container text-xl font-medium opacity-90">
+              One portal. Every role.
+            </p>
+          </div>
 
-        <div className="relative z-10 flex flex-col items-center justify-center w-full px-16">
-          <GraduationCap size={48} className="text-white mb-6" />
-          <h1 className="text-5xl font-extrabold text-white tracking-tight">College ERP</h1>
-          <p className="text-indigo-200 mt-3 text-lg">One portal. Every role.</p>
-
-          {/* Glassmorphism feature card */}
-          <div className="mt-12 w-full max-w-sm bg-white/10 backdrop-blur-md border border-white/20 rounded-2xl p-6">
-            <div className="space-y-4">
-              {features.map(({ icon: Icon, text }) => (
-                <div key={text} className="flex items-center gap-3">
-                  <div className="w-8 h-8 rounded-lg bg-white/20 flex items-center justify-center">
-                    <Icon size={16} className="text-white" />
-                  </div>
-                  <span className="text-white/90 text-sm font-medium">{text}</span>
+          {/* Glassmorphism Card */}
+          <div
+            className="p-8 rounded-xl shadow-2xl"
+            style={{
+              background: 'rgba(255,255,255,0.1)',
+              backdropFilter: 'blur(20px)',
+              WebkitBackdropFilter: 'blur(20px)',
+              border: '1px solid rgba(255,255,255,0.15)',
+            }}
+          >
+            <div className="flex items-center gap-4 mb-6">
+              <div className="w-12 h-12 rounded-full bg-on-primary-container flex items-center justify-center">
+                <span className="material-symbols-outlined text-primary">school</span>
+              </div>
+              <div>
+                <div className="text-white font-headline font-bold">Academic Curator</div>
+                <div className="text-on-primary-container text-xs tracking-wider uppercase font-label">
+                  Institutional Excellence
                 </div>
-              ))}
+              </div>
+            </div>
+            <div className="space-y-3">
+              <div className="h-2 w-full bg-white/20 rounded-full overflow-hidden">
+                <div className="h-full bg-on-primary-container w-3/4" />
+              </div>
+              <div className="flex justify-between text-xs text-on-primary-container font-medium">
+                <span>Campus Digitization Progress</span>
+                <span>75% Complete</span>
+              </div>
             </div>
           </div>
         </div>
-      </div>
+      </section>
 
-      {/* Right panel — form */}
-      <div className="flex-1 flex flex-col items-center justify-center px-6 py-12">
-        {/* Mobile-only branding header */}
-        <div className="lg:hidden flex flex-col items-center mb-8">
-          <div className="w-12 h-12 bg-indigo-600 rounded-xl flex items-center justify-center mb-3">
-            <GraduationCap size={24} className="text-white" />
-          </div>
-          <h1 className="text-2xl font-bold text-gray-900 dark:text-white">College ERP</h1>
-          <p className="text-sm text-gray-500 dark:text-gray-400 mt-1">One portal. Every role.</p>
-        </div>
-
-        <div className="w-full max-w-sm">
-          {/* Step indicator */}
-          <div className="flex items-center justify-center gap-2 mb-6">
-            <div className={`w-2 h-2 rounded-full ${step === 'credentials' ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`} />
-            <span className="text-xs text-gray-500 dark:text-gray-400">
-              Step {step === 'credentials' ? '1' : '2'} of 2
-            </span>
-            <div className={`w-2 h-2 rounded-full ${step === 'otp' ? 'bg-indigo-600' : 'bg-gray-300 dark:bg-gray-600'}`} />
+      {/* Right Panel — Form */}
+      <section className="w-full lg:w-1/2 flex items-center justify-center p-6 md:p-12 bg-surface">
+        <div className="w-full max-w-md">
+          {/* Mobile branding */}
+          <div className="lg:hidden mb-8 text-center">
+            <h1 className="font-headline text-3xl font-bold text-primary tracking-tight">
+              College ERP
+            </h1>
+            <p className="text-on-surface-variant text-sm">One portal. Every role.</p>
           </div>
 
-          <div className="bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
+          <div className="bg-surface-container-lowest p-8 md:p-10 rounded-xl">
+            <header className="mb-10">
+              <h2 className="font-headline text-3xl font-bold text-on-surface tracking-tight mb-2">
+                Welcome Back
+              </h2>
+              <p className="text-on-surface-variant font-body">
+                Sign in to your curator dashboard
+              </p>
+            </header>
+
             {step === 'credentials' ? (
-              <form onSubmit={handleLogin} className="space-y-4">
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Email or ID
+              <form onSubmit={handleLogin} className="space-y-6">
+                {/* Email / ID */}
+                <div className="space-y-2">
+                  <label className="block text-sm font-semibold text-on-surface-variant font-label px-1">
+                    Email or Student ID
                   </label>
-                  <input
-                    type="text"
-                    value={identifier}
-                    onChange={(e) => setIdentifier(e.target.value)}
-                    placeholder="admin@uni.com or STU003 or TCH001"
-                    required
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                  />
-                </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Password
-                  </label>
-                  <input
-                    type="password"
-                    value={password}
-                    onChange={(e) => setPassword(e.target.value)}
-                    required
-                    className="w-full px-3 py-2.5 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                  />
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm">
+                      alternate_email
+                    </span>
+                    <input
+                      type="text"
+                      value={identifier}
+                      onChange={(e) => setIdentifier(e.target.value)}
+                      placeholder="curator@university.edu"
+                      required
+                      className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline text-on-surface outline-none"
+                    />
+                  </div>
                 </div>
 
-                {/* CAPTCHA area */}
-                <div className="flex justify-center">
-                  {isDev ? (
-                    <span className="text-xs bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400 px-3 py-1 rounded-full">
-                      CAPTCHA bypassed (dev mode)
+                {/* Password */}
+                <div className="space-y-2">
+                  <div className="flex justify-between items-center px-1">
+                    <label className="block text-sm font-semibold text-on-surface-variant font-label">
+                      Password
+                    </label>
+                    <a className="text-xs font-bold text-primary hover:underline" href="#">
+                      Forgot?
+                    </a>
+                  </div>
+                  <div className="relative">
+                    <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm">
+                      lock
                     </span>
+                    <input
+                      type="password"
+                      value={password}
+                      onChange={(e) => setPassword(e.target.value)}
+                      placeholder="••••••••"
+                      required
+                      className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline text-on-surface outline-none"
+                    />
+                  </div>
+                </div>
+
+                {/* CAPTCHA */}
+                <div className="p-4 bg-surface-container-low rounded-lg flex items-center justify-between">
+                  {isDev ? (
+                    <>
+                      <div className="flex items-center gap-3">
+                        <div className="w-6 h-6 border-2 border-primary rounded flex items-center justify-center bg-primary">
+                          <span className="material-symbols-outlined text-white text-xs" style={{ fontVariationSettings: "'FILL' 1" }}>check</span>
+                        </div>
+                        <span className="text-sm font-medium text-on-surface-variant">I'm not a robot</span>
+                      </div>
+                      <span className="text-[10px] text-amber-600 bg-amber-50 px-2 py-1 rounded-full font-bold uppercase tracking-wider">
+                        Dev Mode
+                      </span>
+                    </>
                   ) : (
                     <HCaptcha
                       sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY}
                       onVerify={setCaptchaToken}
                       onExpire={() => setCaptchaToken('')}
                       ref={captchaRef}
-                      theme="auto"
+                      theme="light"
                     />
                   )}
                 </div>
 
-                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {error && (
+                  <p className="text-sm text-error font-medium">{error}</p>
+                )}
 
                 <button
                   type="submit"
                   disabled={loading}
-                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/25"
+                  className="w-full py-4 bg-primary-container text-on-primary font-bold rounded-full hover:scale-[1.02] active:scale-95 transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2 group disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Verifying...' : 'Continue'}
+                  {!loading && (
+                    <span className="material-symbols-outlined text-lg group-hover:translate-x-1 transition-transform">
+                      arrow_forward
+                    </span>
+                  )}
                 </button>
               </form>
             ) : (
-              <form onSubmit={handleOTP} className="space-y-4">
-                <div className="text-center mb-2">
-                  <p className="text-sm text-gray-600 dark:text-gray-400">
-                    OTP sent to <span className="font-medium text-gray-900 dark:text-white">{email}</span>
+              <form onSubmit={handleOTP} className="space-y-6">
+                <div className="text-center">
+                  <p className="text-sm text-on-surface-variant">
+                    OTP sent to{' '}
+                    <span className="font-bold text-on-surface">{maskedEmail}</span>
                   </p>
                 </div>
-                <div>
-                  <label className="block text-sm font-medium text-gray-700 dark:text-gray-300 mb-1">
-                    Enter 6-digit code
-                  </label>
-                  <input
-                    type="text"
-                    value={otp}
-                    onChange={(e) => setOtp(e.target.value.replace(/\D/g, '').slice(0, 6))}
-                    placeholder="000000"
-                    required
-                    maxLength={6}
-                    autoFocus
-                    className="w-full px-3 py-3 rounded-xl border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-center tracking-[0.5em] text-2xl font-mono font-bold focus:outline-none focus:ring-2 focus:ring-indigo-500 transition-colors"
-                  />
+
+                {/* 6-box OTP input */}
+                <div className="flex gap-3">
+                  {otp.map((digit, i) => (
+                    <input
+                      key={i}
+                      ref={(el) => (otpRefs.current[i] = el)}
+                      type="text"
+                      inputMode="numeric"
+                      maxLength={1}
+                      value={digit}
+                      onChange={(e) => handleOtpChange(i, e.target.value)}
+                      onKeyDown={(e) => handleOtpKeyDown(i, e)}
+                      autoFocus={i === 0}
+                      className="w-full h-14 bg-surface-container-high border-0 rounded-lg text-center text-xl font-bold text-on-surface focus:ring-2 focus:ring-primary focus:bg-surface-container-lowest transition-all outline-none"
+                    />
+                  ))}
                 </div>
 
-                {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
+                {error && (
+                  <p className="text-sm text-error font-medium text-center">{error}</p>
+                )}
 
                 <button
                   type="submit"
-                  disabled={loading || otp.length !== 6}
-                  className="w-full py-2.5 px-4 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-xl text-sm transition-all duration-200 hover:shadow-lg hover:shadow-indigo-500/25"
+                  disabled={loading || otp.join('').length !== 6}
+                  className="w-full py-4 bg-primary-container text-on-primary font-bold rounded-full hover:scale-[1.02] active:scale-95 transition-transform shadow-lg shadow-primary/20 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed"
                 >
                   {loading ? 'Verifying...' : 'Verify OTP'}
                 </button>
+
                 <button
                   type="button"
-                  onClick={() => { setStep('credentials'); setOtp(''); setError('') }}
-                  className="w-full py-2 text-sm text-gray-500 dark:text-gray-400 hover:text-gray-700 dark:hover:text-gray-200"
+                  onClick={() => { setStep('credentials'); setOtp(['', '', '', '', '', '']); setError('') }}
+                  className="w-full py-2 text-sm text-on-surface-variant hover:text-on-surface transition-colors"
                 >
-                  Back to login
+                  ← Back to login
                 </button>
               </form>
             )}
+
+            {/* OTP preview (step 1 greyed out) */}
+            {step === 'credentials' && (
+              <div className="mt-10 pt-8 border-t border-outline-variant/15">
+                <div className="flex items-center gap-3 text-outline mb-4">
+                  <span className="material-symbols-outlined text-lg">phonelink_lock</span>
+                  <span className="text-xs font-bold font-label tracking-widest uppercase">
+                    Secondary Verification
+                  </span>
+                </div>
+                <div className="opacity-40 pointer-events-none">
+                  <div className="flex gap-3 mb-4">
+                    {Array(6).fill(0).map((_, i) => (
+                      <div key={i} className="w-full h-12 bg-surface-container-high rounded-lg flex items-center justify-center text-outline-variant font-bold">
+                        _
+                      </div>
+                    ))}
+                  </div>
+                  <p className="text-xs text-on-surface-variant text-center">
+                    OTP step will appear after initial sign-in
+                  </p>
+                </div>
+              </div>
+            )}
           </div>
+
+          <footer className="mt-8 text-center">
+            <p className="text-sm text-on-surface-variant">
+              Trouble logging in?{' '}
+              <a className="text-primary font-bold hover:underline" href="#">
+                Contact ERP Support
+              </a>
+            </p>
+          </footer>
         </div>
-      </div>
-    </div>
+      </section>
+    </main>
   )
 }

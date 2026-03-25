@@ -80,9 +80,11 @@ async function login(req, res, next) {
     await sendOTPEmail(user.email, otp)
 
     // 6. Return only what's needed — never return the user object directly
+    // lookupEmail is the real email (needed for OTP verify when user logged in with STU/TCH id)
     res.json({
       message: 'OTP sent to your registered email',
-      email: user.email.replace(/(.{2}).*(@.*)/, '$1***$2'), // mask email in response
+      email: user.email.replace(/(.{2}).*(@.*)/, '$1***$2'), // masked — display only
+      lookupEmail: user.email,                                // real email — used for /verify-otp
       mustResetPassword: user.mustResetPassword,
     })
   } catch (err) {

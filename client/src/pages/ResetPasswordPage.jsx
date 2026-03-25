@@ -19,10 +19,7 @@ export default function ResetPasswordPage() {
     }
     setLoading(true)
     try {
-      await api.post('/auth/reset-password', {
-        email: user.email,
-        newPassword,
-      })
+      await api.post('/auth/reset-password', { email: user.email, newPassword })
       await logout()
       navigate('/', { state: { message: 'Password updated. Please log in again.' } })
     } catch (err) {
@@ -33,39 +30,72 @@ export default function ResetPasswordPage() {
   }
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gray-50 dark:bg-gray-950 px-4">
-      <div className="w-full max-w-sm bg-white dark:bg-gray-900 rounded-2xl shadow-sm border border-gray-200 dark:border-gray-800 p-8">
-        <h2 className="text-xl font-bold text-gray-900 dark:text-white mb-1">Set your password</h2>
-        <p className="text-sm text-gray-500 dark:text-gray-400 mb-6">
-          Choose a new password to continue.
-        </p>
-        <form onSubmit={handleSubmit} className="space-y-4">
-          <input
-            type="password"
-            value={newPassword}
-            onChange={(e) => setNewPassword(e.target.value)}
-            placeholder="New password (min 8 chars)"
-            required
-            minLength={8}
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          <input
-            type="password"
-            value={confirm}
-            onChange={(e) => setConfirm(e.target.value)}
-            placeholder="Confirm password"
-            required
-            className="w-full px-3 py-2 rounded-lg border border-gray-300 dark:border-gray-700 bg-white dark:bg-gray-800 text-gray-900 dark:text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500"
-          />
-          {error && <p className="text-sm text-red-600 dark:text-red-400">{error}</p>}
-          <button
-            type="submit"
-            disabled={loading}
-            className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white font-medium rounded-lg text-sm transition-colors"
-          >
-            {loading ? 'Saving...' : 'Set password & login'}
-          </button>
-        </form>
+    <div className="min-h-screen flex items-center justify-center bg-surface px-4">
+      <div className="w-full max-w-sm">
+        <div className="text-center mb-8">
+          <div className="w-12 h-12 bg-primary-container rounded-xl flex items-center justify-center mx-auto mb-4">
+            <span className="material-symbols-outlined text-white text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>
+              lock_reset
+            </span>
+          </div>
+          <h1 className="text-2xl font-bold text-on-surface font-headline">Set your password</h1>
+          <p className="text-sm text-on-surface-variant mt-2">
+            Choose a new password to continue.
+          </p>
+        </div>
+
+        <div className="bg-surface-container-lowest p-8 rounded-xl">
+          <form onSubmit={handleSubmit} className="space-y-5">
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-on-surface-variant font-label px-1">
+                New Password
+              </label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm">
+                  lock
+                </span>
+                <input
+                  type="password"
+                  value={newPassword}
+                  onChange={(e) => setNewPassword(e.target.value)}
+                  placeholder="Min 8 characters"
+                  required
+                  minLength={8}
+                  className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline text-on-surface outline-none"
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <label className="block text-sm font-semibold text-on-surface-variant font-label px-1">
+                Confirm Password
+              </label>
+              <div className="relative">
+                <span className="material-symbols-outlined absolute left-4 top-1/2 -translate-y-1/2 text-outline text-sm">
+                  lock_clock
+                </span>
+                <input
+                  type="password"
+                  value={confirm}
+                  onChange={(e) => setConfirm(e.target.value)}
+                  placeholder="Repeat password"
+                  required
+                  className="w-full pl-11 pr-4 py-3.5 bg-surface-container-high border-0 rounded-lg focus:ring-1 focus:ring-primary focus:bg-surface-container-lowest transition-all placeholder:text-outline text-on-surface outline-none"
+                />
+              </div>
+            </div>
+
+            {error && <p className="text-sm text-error font-medium">{error}</p>}
+
+            <button
+              type="submit"
+              disabled={loading}
+              className="w-full py-4 bg-primary-container text-on-primary font-bold rounded-full hover:scale-[1.02] active:scale-95 transition-transform shadow-lg shadow-primary/20 disabled:opacity-60 disabled:cursor-not-allowed"
+            >
+              {loading ? 'Saving...' : 'Set password & continue'}
+            </button>
+          </form>
+        </div>
       </div>
     </div>
   )

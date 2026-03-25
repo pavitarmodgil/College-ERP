@@ -19,10 +19,10 @@ async function main() {
 
   // Admin
   await prisma.user.upsert({
-    where: { email: 'admin@uni.com' },
+    where: { email: 'pavitarmodgil001@gmail.com' },
     update: {},
     create: {
-      email: 'admin@uni.com',
+      email: 'pavitarmodgil001@gmail.com',
       password: await bcrypt.hash('admin123', SALT_ROUNDS),
       role: 'ADMIN',
     },
@@ -68,7 +68,7 @@ async function main() {
     },
   })
 
-  console.log('Seeded: 1 dept, 4 users (admin, TCH001, TCH002, STU003)')
+  console.log('Seeded: 1 dept, 4 users (pavitarmodgil001, TCH001, TCH002, STU003)')
 }
 
 main()
