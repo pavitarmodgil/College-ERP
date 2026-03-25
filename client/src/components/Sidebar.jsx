@@ -28,6 +28,7 @@ export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const links = NAV_LINKS[user?.role] || []
+  const displayName = user?.email?.split('@')[0] || ''
 
   async function handleLogout() {
     await logout()
@@ -35,17 +36,21 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 h-screen flex flex-col bg-white dark:bg-gray-900 border-r border-gray-200 dark:border-gray-800">
+    <aside className="w-64 h-screen flex flex-col bg-slate-50 dark:bg-neutral-900 border-r border-gray-200 dark:border-gray-800">
       {/* Logo */}
       <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-        <GraduationCap size={24} className="text-indigo-600 dark:text-indigo-400" />
+        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
+          <GraduationCap size={16} className="text-white" />
+        </div>
         <span className="font-semibold text-gray-900 dark:text-white">College ERP</span>
       </div>
 
       {/* User info */}
       <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-        <p className="text-sm font-medium text-gray-900 dark:text-white truncate">{user?.email}</p>
-        <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300">
+        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate capitalize">
+          {displayName}
+        </p>
+        <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 font-medium">
           {user?.role}
         </span>
       </div>
@@ -58,9 +63,9 @@ export default function Sidebar() {
             to={to}
             end
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2 rounded-lg text-sm transition-colors ${
+              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
                 isActive
-                  ? 'bg-indigo-50 text-indigo-700 dark:bg-indigo-950 dark:text-indigo-300 font-medium'
+                  ? 'bg-gradient-to-r from-indigo-50 to-white dark:from-indigo-900/30 dark:to-neutral-900 text-indigo-700 dark:text-indigo-300 font-medium border-l-2 border-indigo-500 shadow-sm'
                   : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
               }`
             }
