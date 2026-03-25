@@ -151,7 +151,7 @@ async function createUser(req, res, next) {
 // PATCH /api/users/:id
 async function updateUser(req, res, next) {
   try {
-    const { email, departmentId } = req.body
+    const { email, departmentId, password } = req.body
     const userId = parseInt(req.params.id)
 
     // Prevent editing own account via this endpoint
@@ -159,10 +159,17 @@ async function updateUser(req, res, next) {
       return res.status(400).json({ error: 'Use profile settings to edit your own account' })
     }
 
+    if (password !== undefined && password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' })
+    }
+
     const updateData = {}
     if (email) updateData.email = email
     if (departmentId !== undefined) {
       updateData.departmentId = departmentId ? parseInt(departmentId) : null
+    }
+    if (password) {
+      updateData.password = await bcrypt.hash(password, 12)
     }
 
     const user = await prisma.user.update({

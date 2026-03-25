@@ -3,6 +3,8 @@ import { useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 
+const ROLE_HOME = { ADMIN: '/admin', TEACHER: '/teacher', STUDENT: '/student' }
+
 export default function ResetPasswordPage() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
@@ -20,8 +22,8 @@ export default function ResetPasswordPage() {
     setLoading(true)
     try {
       await api.post('/auth/reset-password', { email: user.email, newPassword })
-      await logout()
-      navigate('/', { state: { message: 'Password updated. Please log in again.' } })
+      // Token is still valid — go straight to dashboard, no need to re-login
+      navigate(ROLE_HOME[user?.role] || '/')
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to reset password')
     } finally {

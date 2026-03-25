@@ -8,6 +8,8 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
     role: user?.role || 'STUDENT',
     departmentId: user?.department?.id || '',
   })
+  // For edit mode, track whether admin wants to change the password
+  const [changePassword, setChangePassword] = useState(false)
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
@@ -30,7 +32,11 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
         role: form.role,
         departmentId: form.departmentId || null,
       }
-      if (!isEdit) payload.password = form.password
+      if (!isEdit) {
+        payload.password = form.password
+      } else if (changePassword && form.password) {
+        payload.password = form.password
+      }
       await onSubmit(payload)
     } catch (err) {
       setError(err.response?.data?.error || 'Something went wrong')
@@ -119,8 +125,49 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
             </div>
           </div>
 
-          {/* Password (create only) */}
-          {!isEdit && (
+          {/* Password field */}
+          {isEdit ? (
+            <div>
+              <div className="flex items-center justify-between mb-1.5 ml-1">
+                <label className="text-xs font-semibold uppercase tracking-wider text-on-surface-variant">
+                  Password
+                </label>
+                <button
+                  type="button"
+                  onClick={() => { setChangePassword((v) => !v); setForm((p) => ({ ...p, password: '' })) }}
+                  className="text-xs font-semibold text-primary hover:underline"
+                >
+                  {changePassword ? 'Cancel change' : 'Change password'}
+                </button>
+              </div>
+              {changePassword ? (
+                <div className="relative flex items-center">
+                  <input
+                    name="password"
+                    type={showPassword ? 'text' : 'password'}
+                    required
+                    value={form.password}
+                    onChange={handleChange}
+                    placeholder="New password (min 8 chars)"
+                    className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface placeholder-on-surface-variant/50 outline-none pr-12"
+                  />
+                  <button
+                    type="button"
+                    onClick={() => setShowPassword((v) => !v)}
+                    className="absolute right-4 text-on-surface-variant"
+                  >
+                    <span className="material-symbols-outlined text-[20px]">
+                      {showPassword ? 'visibility_off' : 'visibility'}
+                    </span>
+                  </button>
+                </div>
+              ) : (
+                <div className="bg-surface-container-high rounded-lg py-3 px-4 text-on-surface-variant text-sm tracking-widest">
+                  ••••••••
+                </div>
+              )}
+            </div>
+          ) : (
             <div>
               <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
                 Temporary Password
