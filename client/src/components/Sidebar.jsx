@@ -1,34 +1,51 @@
 import { NavLink, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import ThemeToggle from './ThemeToggle'
-import {
-  LayoutDashboard, Users, BookOpen,
-  ClipboardList, BarChart2, LogOut, GraduationCap
-} from 'lucide-react'
+
+const NAV_ICONS = {
+  Dashboard: 'dashboard',
+  Users: 'group',
+  Courses: 'school',
+  Departments: 'account_tree',
+  Attendance: 'calendar_today',
+  Grades: 'grade',
+  'My Grades': 'grade',
+  'My Attendance': 'event_available',
+}
 
 const NAV_LINKS = {
   ADMIN: [
-    { to: '/admin', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/admin/users', icon: Users, label: 'Users' },
-    { to: '/admin/courses', icon: BookOpen, label: 'Courses' },
+    { to: '/admin', label: 'Dashboard' },
+    { to: '/admin/users', label: 'Users' },
+    { to: '/admin/courses', label: 'Courses' },
+    { to: '/admin/departments', label: 'Departments' },
   ],
   TEACHER: [
-    { to: '/teacher', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/teacher/attendance', icon: ClipboardList, label: 'Attendance' },
-    { to: '/teacher/grades', icon: BarChart2, label: 'Grades' },
+    { to: '/teacher', label: 'Dashboard' },
+    { to: '/teacher/attendance', label: 'Attendance' },
+    { to: '/teacher/grades', label: 'Grades' },
+    { to: '/teacher/courses', label: 'Courses' },
   ],
   STUDENT: [
-    { to: '/student', icon: LayoutDashboard, label: 'Dashboard' },
-    { to: '/student/grades', icon: BarChart2, label: 'My Grades' },
-    { to: '/student/attendance', icon: ClipboardList, label: 'My Attendance' },
+    { to: '/student', label: 'Dashboard' },
+    { to: '/student/grades', label: 'My Grades' },
+    { to: '/student/attendance', label: 'My Attendance' },
+    { to: '/student/courses', label: 'Courses' },
   ],
+}
+
+const ROLE_LABELS = {
+  ADMIN: 'Super Admin',
+  TEACHER: 'Senior Professor',
+  STUDENT: 'Student',
 }
 
 export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const links = NAV_LINKS[user?.role] || []
-  const displayName = user?.email?.split('@')[0] || ''
+  const displayEmail = user?.email || ''
+  const roleLabel = ROLE_LABELS[user?.role] || user?.role || ''
 
   async function handleLogout() {
     await logout()
@@ -36,55 +53,75 @@ export default function Sidebar() {
   }
 
   return (
-    <aside className="w-64 h-screen flex flex-col bg-slate-50 dark:bg-neutral-900 border-r border-gray-200 dark:border-gray-800">
+    <aside className="fixed left-0 top-0 h-full z-40 flex flex-col bg-slate-50 dark:bg-neutral-900 w-16 md:w-64 transition-all duration-300">
       {/* Logo */}
-      <div className="flex items-center gap-3 px-6 py-5 border-b border-gray-200 dark:border-gray-800">
-        <div className="w-8 h-8 bg-indigo-600 rounded-lg flex items-center justify-center">
-          <GraduationCap size={16} className="text-white" />
+      <div className="px-4 py-8 flex items-center gap-3">
+        <div className="w-8 h-8 rounded-lg bg-primary-container flex items-center justify-center flex-shrink-0">
+          <span
+            className="material-symbols-outlined text-white text-lg"
+            style={{ fontVariationSettings: "'FILL' 1" }}
+          >
+            school
+          </span>
         </div>
-        <span className="font-semibold text-gray-900 dark:text-white">College ERP</span>
+        <div className="hidden md:block overflow-hidden">
+          <h1 className="text-xl font-bold text-indigo-600 dark:text-indigo-400 tracking-tight font-headline whitespace-nowrap">
+            Academic Curator
+          </h1>
+          <p className="text-[10px] uppercase tracking-widest text-slate-400 font-semibold">
+            ERP Admin
+          </p>
+        </div>
       </div>
 
-      {/* User info */}
-      <div className="px-6 py-4 border-b border-gray-200 dark:border-gray-800">
-        <p className="text-sm font-semibold text-gray-900 dark:text-white truncate capitalize">
-          {displayName}
-        </p>
-        <span className="inline-block mt-1 px-2 py-0.5 text-xs rounded-full bg-indigo-100 text-indigo-700 dark:bg-indigo-900 dark:text-indigo-300 font-medium">
-          {user?.role}
-        </span>
-      </div>
-
-      {/* Nav links */}
-      <nav className="flex-1 px-3 py-4 space-y-1">
-        {links.map(({ to, icon: Icon, label }) => (
+      {/* Nav Links */}
+      <nav className="flex-1 px-2 space-y-1">
+        {links.map(({ to, label }) => (
           <NavLink
             key={to}
             to={to}
             end
             className={({ isActive }) =>
-              `flex items-center gap-3 px-3 py-2.5 rounded-xl text-sm transition-all duration-200 ${
+              `flex items-center gap-3 px-4 py-3 rounded-xl transition-all duration-200 ${
                 isActive
-                  ? 'bg-gradient-to-r from-indigo-50 to-white dark:from-indigo-900/30 dark:to-neutral-900 text-indigo-700 dark:text-indigo-300 font-medium border-l-2 border-indigo-500 shadow-sm'
-                  : 'text-gray-600 dark:text-gray-400 hover:bg-gray-100 dark:hover:bg-gray-800'
+                  ? 'text-indigo-600 dark:text-indigo-400 font-semibold bg-white dark:bg-neutral-800 shadow-sm scale-95'
+                  : 'text-slate-500 dark:text-neutral-400 hover:text-indigo-600 dark:hover:text-indigo-300 hover:bg-indigo-50/50 dark:hover:bg-indigo-900/20'
               }`
             }
           >
-            <Icon size={16} />
-            {label}
+            <span className="material-symbols-outlined text-xl flex-shrink-0">
+              {NAV_ICONS[label] || 'circle'}
+            </span>
+            <span className="hidden md:inline text-sm">{label}</span>
           </NavLink>
         ))}
       </nav>
 
-      {/* Bottom: theme + logout */}
-      <div className="px-3 py-4 border-t border-gray-200 dark:border-gray-800 flex items-center justify-between">
+      {/* Footer */}
+      <div className="px-2 pb-6 space-y-1 pt-4">
+        {/* User profile card — desktop only */}
+        <div className="hidden md:flex items-center gap-3 px-4 py-4 mb-2 bg-surface-container-low dark:bg-neutral-800 rounded-xl">
+          <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center flex-shrink-0">
+            <span className="material-symbols-outlined text-primary text-base">person</span>
+          </div>
+          <div className="overflow-hidden flex-1 min-w-0">
+            <p className="text-xs font-bold truncate text-on-surface dark:text-white">
+              {displayEmail}
+            </p>
+            <span className="text-[10px] px-2 py-0.5 bg-primary-fixed text-on-primary-fixed-variant rounded-full">
+              {roleLabel}
+            </span>
+          </div>
+        </div>
+
         <ThemeToggle />
+
         <button
           onClick={handleLogout}
-          className="flex items-center gap-2 px-3 py-2 text-sm text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950 rounded-lg transition-colors"
+          className="w-full flex items-center gap-3 px-4 py-3 text-error dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-950/30 transition-colors rounded-xl"
         >
-          <LogOut size={16} />
-          Logout
+          <span className="material-symbols-outlined text-xl flex-shrink-0">logout</span>
+          <span className="hidden md:inline text-sm font-medium">Logout</span>
         </button>
       </div>
     </aside>
