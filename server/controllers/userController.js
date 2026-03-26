@@ -265,10 +265,10 @@ async function getRecentActivity(req, res, next) {
   try {
     const enrollments = await prisma.enrollment.findMany({
       take: 8,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { enrolledAt: 'desc' },
       select: {
         id: true,
-        createdAt: true,
+        enrolledAt: true,
         user: {
           select: {
             firstName: true, lastName: true, email: true,
@@ -301,7 +301,7 @@ async function getRecentActivity(req, res, next) {
         dept: e.user.department?.name || '—',
         course: e.course.code,
         status,
-        date: new Date(e.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+        date: new Date(e.enrolledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       }
     })
 
