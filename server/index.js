@@ -8,6 +8,8 @@ const userRoutes = require('./routes/users')
 const courseRoutes = require('./routes/courses')
 const attendanceRoutes = require('./routes/attendance')
 const gradeRoutes = require('./routes/grades')
+const announcementRoutes = require('./routes/announcements')
+const timetableRoutes = require('./routes/timetable')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -29,6 +31,8 @@ app.use('/api/users', userRoutes)
 app.use('/api/courses', courseRoutes)
 app.use('/api/attendance', attendanceRoutes)
 app.use('/api/grades', gradeRoutes)
+app.use('/api/announcements', announcementRoutes)
+app.use('/api/timetable', timetableRoutes)
 
 // Health check — useful for deployment later
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))

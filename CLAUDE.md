@@ -74,7 +74,8 @@ Roles: Student, Teacher, Admin, HOD, Principal.
   - [x] Course Management — CRUD, assign teachers, enroll students, self-enroll
   - [x] Attendance — teacher marks sessions, student views percentage
   - [x] Grades — teacher entry per component, auto letter grade, student GPA report
-  - [ ] Timetable / Announcements (not started)
+  - [x] Announcements — admin CRUD, role-targeted broadcast, widget on all dashboards
+  - [ ] Timetable (not started)
 - [ ] Phase 5 — Deploy (Docker + GitHub Actions)
 
 ## Phase 4 — What's Built
@@ -109,9 +110,31 @@ Roles: Student, Teacher, Admin, HOD, Principal.
 | <35 | F | 0.0 |
 
 GPA calculated from FINAL component only. Pass = any grade except F (P is a bare pass).
- 
+
+### Announcements (feat/phase4-announcements)
+- `prisma/schema.prisma` — `Announcement` model (`targetRole String` — not enum, supports "ALL")
+- `prisma/migrations/20260326000000_add_announcements/` — manual migration (shadow DB workaround)
+- `server/controllers/announcementController.js` — 5 endpoints, role-scoped list, VALID_TARGETS guard
+- `server/routes/announcements.js` — registered at `/api/announcements`
+- `client/src/components/AnnouncementFormModal.jsx` — create/edit modal (controlled form, backdrop close)
+- `client/src/components/AnnouncementsWidget.jsx` — shared read-only widget for all dashboards
+- `client/src/pages/AnnouncementsPage.jsx` — shared full-page feed (Teacher + Student)
+- `client/src/pages/admin/AnnouncementsPage.jsx` — admin table view with filter tabs, edit/delete, bento cards
+- Widget wired into AdminDashboard, TeacherDashboard, StudentDashboard
+
+### Announcements API endpoints
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| GET | `/api/announcements` | ALL | Paginated list scoped to caller's role |
+| GET | `/api/announcements/:id` | ALL | Single announcement (role-gated) |
+| POST | `/api/announcements` | ADMIN | Create announcement |
+| PATCH | `/api/announcements/:id` | ADMIN | Partial update |
+| DELETE | `/api/announcements/:id` | ADMIN | Hard delete |
+
+`targetRole` valid values: `ALL`, `ADMIN`, `TEACHER`, `STUDENT`. Stored as String (not enum) to avoid polluting the `Role` enum with a non-user value.
+
 ---
- 
+
 ## How to help me
 - Always explain the **why** behind patterns, not just the code
 - Prefer production patterns (env vars, error handling, separation of concerns)
