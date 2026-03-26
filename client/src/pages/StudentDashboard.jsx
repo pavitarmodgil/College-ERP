@@ -40,9 +40,17 @@ const upcomingExams = [
   { month: 'Oct', day: '27', title: 'Cybersecurity Principles', time: '02:30 PM • Main Hall' },
 ]
 
+function getWelcomeName(user) {
+  if (user?.firstName) {
+    return user.title ? `${user.title}. ${user.firstName}` : user.firstName
+  }
+  return user?.email?.split('@')[0]?.split(/[._-]/)[0]
+    ?.replace(/\b\w/g, c => c.toUpperCase()) || 'Student'
+}
+
 export default function StudentDashboard() {
   const { user } = useAuth()
-  const displayName = user?.studentId || user?.email?.split('@')[0] || 'Student'
+  const displayName = getWelcomeName(user)
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   const [availableCourses, setAvailableCourses] = useState([])

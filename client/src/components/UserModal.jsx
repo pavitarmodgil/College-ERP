@@ -7,6 +7,9 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
     password: '',
     role: user?.role || 'STUDENT',
     departmentId: user?.department?.id || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
+    title: user?.title || '',
   })
   // For edit mode, track whether admin wants to change the password
   const [changePassword, setChangePassword] = useState(false)
@@ -31,6 +34,9 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
         email: form.email,
         role: form.role,
         departmentId: form.departmentId || null,
+        firstName: form.firstName || null,
+        lastName: form.lastName || null,
+        title: form.title || null,
       }
       if (!isEdit) {
         payload.password = form.password
@@ -71,6 +77,52 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
 
         {/* Form */}
         <form className="p-6 space-y-4" onSubmit={handleSubmit}>
+          {/* Title + First Name + Last Name */}
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
+                Title
+              </label>
+              <select
+                name="title"
+                value={form.title}
+                onChange={handleChange}
+                className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface outline-none"
+              >
+                <option value="">None</option>
+                <option value="Mr">Mr</option>
+                <option value="Ms">Ms</option>
+                <option value="Mrs">Mrs</option>
+                <option value="Dr">Dr</option>
+                <option value="Prof">Prof</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
+                First Name
+              </label>
+              <input
+                name="firstName"
+                value={form.firstName}
+                onChange={handleChange}
+                placeholder="Aman"
+                className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
+                Last Name
+              </label>
+              <input
+                name="lastName"
+                value={form.lastName}
+                onChange={handleChange}
+                placeholder="Kumar"
+                className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface outline-none"
+              />
+            </div>
+          </div>
+
           {/* Email */}
           <div>
             <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">

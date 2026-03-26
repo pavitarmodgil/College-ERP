@@ -11,9 +11,17 @@ const recentActivity = [
   { initials: 'BT', color: 'bg-rose-100 text-rose-600', name: 'Bradley Thompson', dept: 'Physical Therapy', course: 'PHY-300-Kin', status: 'Completed', statusColor: 'text-emerald-600', dot: 'bg-emerald-500', date: 'Oct 22, 2023' },
 ]
 
+function getWelcomeName(user) {
+  if (user?.firstName) {
+    return user.title ? `${user.title}. ${user.firstName}` : user.firstName
+  }
+  return user?.email?.split('@')[0]?.split(/[._-]/)[0]
+    ?.replace(/\b\w/g, c => c.toUpperCase()) || 'Admin'
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth()
-  const displayName = user?.email?.split('@')[0] || 'Admin'
+  const displayName = getWelcomeName(user)
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   const [studentCount, setStudentCount] = useState(null)

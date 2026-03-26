@@ -14,7 +14,14 @@ export function AuthProvider({ children }) {
         const payload = JSON.parse(atob(token.split('.')[1]))
         // Check expiry
         if (payload.exp * 1000 > Date.now()) {
-          setUser({ id: payload.id, email: payload.email, role: payload.role })
+          setUser({
+            id: payload.id,
+            email: payload.email,
+            role: payload.role,
+            firstName: payload.firstName,
+            lastName: payload.lastName,
+            title: payload.title,
+          })
         } else {
           localStorage.removeItem('accessToken')
           setToken(null)

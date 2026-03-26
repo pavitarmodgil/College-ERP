@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import UserModal from '../../components/UserModal'
 import DeactivateConfirmModal from '../../components/DeactivateConfirmModal'
@@ -29,6 +30,7 @@ const AVATAR_COLORS = [
 ]
 
 export default function UsersPage() {
+  const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -103,6 +105,15 @@ export default function UsersPage() {
       // error handled by modal
     } finally {
       setDeactivateLoading(false)
+    }
+  }
+
+  async function handleReactivate(userId) {
+    try {
+      await api.patch(`/users/${userId}/reactivate`)
+      fetchUsers()
+    } catch (err) {
+      alert(err.response?.data?.error || 'Failed to reactivate user')
     }
   }
 
@@ -243,8 +254,11 @@ export default function UsersPage() {
                                 {getInitials(u.email)}
                               </div>
                               <div>
-                                <p className="font-bold text-on-surface leading-tight capitalize">
-                                  {u.email.split('@')[0].replace(/[._-]/g, ' ')}
+                                <p className="font-bold text-on-surface leading-tight">
+                                  {u.firstName
+                                    ? `${u.title ? u.title + '. ' : ''}${u.firstName}${u.lastName ? ' ' + u.lastName : ''}`
+                                    : u.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, c => c.toUpperCase())
+                                  }
                                 </p>
                                 <p className="text-xs text-on-surface-variant">{u.email}</p>
                               </div>
@@ -287,6 +301,15 @@ export default function UsersPage() {
                           {/* Actions */}
                           <td className="px-8 py-5 text-right">
                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                              {u.role === 'STUDENT' && (
+                                <button
+                                  onClick={() => navigate(`/admin/users/${u.id}/profile`)}
+                                  className="p-2 hover:bg-secondary/10 text-secondary rounded-lg transition-colors"
+                                  title="View profile"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">person</span>
+                                </button>
+                              )}
                               <button
                                 onClick={() => { setEditingUser(u); setShowModal(true) }}
                                 className="p-2 hover:bg-primary/10 text-primary rounded-lg transition-colors"
@@ -294,13 +317,21 @@ export default function UsersPage() {
                               >
                                 <span className="material-symbols-outlined text-[18px]">edit</span>
                               </button>
-                              {u.isActive && (
+                              {u.isActive ? (
                                 <button
                                   onClick={() => { setTargetUser(u); setShowDeactivate(true) }}
                                   className="p-2 hover:bg-error/10 text-error rounded-lg transition-colors"
                                   title="Deactivate user"
                                 >
                                   <span className="material-symbols-outlined text-[18px]">person_off</span>
+                                </button>
+                              ) : (
+                                <button
+                                  onClick={() => handleReactivate(u.id)}
+                                  className="p-2 hover:bg-emerald-50 text-emerald-600 rounded-lg transition-colors"
+                                  title="Reactivate user"
+                                >
+                                  <span className="material-symbols-outlined text-[18px]">person_check</span>
                                 </button>
                               )}
                             </div>

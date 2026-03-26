@@ -14,9 +14,17 @@ const schedule = [
   { time: '11:30', title: 'CS-101: Intro to Algorithms', sub: 'Virtual Room 12 • 120 Students Enrolled', active: false },
 ]
 
+function getWelcomeName(user) {
+  if (user?.firstName) {
+    return user.title ? `${user.title}. ${user.firstName}` : user.firstName
+  }
+  return user?.email?.split('@')[0]?.split(/[._-]/)[0]
+    ?.replace(/\b\w/g, c => c.toUpperCase()) || 'Teacher'
+}
+
 export default function TeacherDashboard() {
   const { user } = useAuth()
-  const displayName = user?.teacherId || user?.email?.split('@')[0] || 'Teacher'
+  const displayName = getWelcomeName(user)
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   return (

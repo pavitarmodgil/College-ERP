@@ -19,6 +19,8 @@ import AnnouncementsPage from './pages/AnnouncementsPage'
 import AdminTimetablePage from './pages/admin/TimetablePage'
 import TeacherTimetablePage from './pages/teacher/TeacherTimetablePage'
 import StudentTimetablePage from './pages/student/StudentTimetablePage'
+import StudentProfilePage from './pages/admin/StudentProfilePage'
+import DepartmentsPage from './pages/admin/DepartmentsPage'
 
 export default function App() {
   return (
@@ -115,6 +117,23 @@ export default function App() {
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <StudentGradesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/users/:id/profile"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <StudentProfilePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/admin/departments"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <DepartmentsPage />
               </ProtectedRoute>
             }
           />

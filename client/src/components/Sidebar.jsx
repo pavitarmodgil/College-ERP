@@ -52,7 +52,9 @@ export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const links = NAV_LINKS[user?.role] || []
-  const displayEmail = user?.email || ''
+  const displayName = user?.firstName
+    ? `${user.title ? user.title + '. ' : ''}${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
+    : user?.email?.split('@')[0]?.replace(/[._-]/g, ' ')?.replace(/\b\w/g, c => c.toUpperCase()) || ''
   const roleLabel = ROLE_LABELS[user?.role] || user?.role || ''
 
   async function handleLogout() {
@@ -114,7 +116,7 @@ export default function Sidebar() {
           </div>
           <div className="overflow-hidden flex-1 min-w-0">
             <p className="text-xs font-bold truncate text-on-surface dark:text-white">
-              {displayEmail}
+              {displayName}
             </p>
             <span className="text-[10px] px-2 py-0.5 bg-primary-fixed text-on-primary-fixed-variant rounded-full">
               {roleLabel}

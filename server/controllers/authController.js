@@ -22,7 +22,14 @@ async function findUserByIdentifier(identifier) {
 // Helper: generate tokens
 function generateAccessToken(user) {
   return jwt.sign(
-    { id: user.id, email: user.email, role: user.role },
+    {
+      id: user.id,
+      email: user.email,
+      role: user.role,
+      firstName: user.firstName || null,
+      lastName: user.lastName || null,
+      title: user.title || null,
+    },
     process.env.JWT_SECRET,
     { expiresIn: '15m' }
   )
