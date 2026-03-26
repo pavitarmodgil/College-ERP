@@ -4,6 +4,7 @@ const helmet = require('helmet')
 const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const authRoutes = require('./routes/auth')
+const userRoutes = require('./routes/users')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -21,6 +22,7 @@ app.use(cookieParser())
 
 // Routes
 app.use('/api/auth', authRoutes)
+app.use('/api/users', userRoutes)
 
 // Health check — useful for deployment later
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))
