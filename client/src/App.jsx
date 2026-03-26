@@ -9,8 +9,11 @@ import CoursesPage from './pages/admin/CoursesPage'
 import TeacherDashboard from './pages/TeacherDashboard'
 import TeacherAttendancePage from './pages/teacher/TeacherAttendancePage'
 import AttendanceSessionPage from './pages/teacher/AttendanceSessionPage'
+import TeacherGradesPage from './pages/teacher/TeacherGradesPage'
+import GradeEntryPage from './pages/teacher/GradeEntryPage'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentAttendancePage from './pages/student/StudentAttendancePage'
+import StudentGradesPage from './pages/student/StudentGradesPage'
 
 export default function App() {
   return (
@@ -83,6 +86,30 @@ export default function App() {
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <StudentAttendancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grades"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <TeacherGradesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grades/:courseId"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <GradeEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/grades"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentGradesPage />
               </ProtectedRoute>
             }
           />
