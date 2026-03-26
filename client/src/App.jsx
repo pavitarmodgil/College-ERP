@@ -16,6 +16,9 @@ import StudentAttendancePage from './pages/student/StudentAttendancePage'
 import StudentGradesPage from './pages/student/StudentGradesPage'
 import AdminAnnouncementsPage from './pages/admin/AnnouncementsPage'
 import AnnouncementsPage from './pages/AnnouncementsPage'
+import AdminTimetablePage from './pages/admin/TimetablePage'
+import TeacherTimetablePage from './pages/teacher/TeacherTimetablePage'
+import StudentTimetablePage from './pages/student/StudentTimetablePage'
 
 export default function App() {
   return (
@@ -137,6 +140,31 @@ export default function App() {
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <AnnouncementsPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/timetable"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <AdminTimetablePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/timetable"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <TeacherTimetablePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/timetable"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentTimetablePage />
               </ProtectedRoute>
             }
           />
