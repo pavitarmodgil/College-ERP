@@ -5,6 +5,9 @@ const cors = require('cors')
 const cookieParser = require('cookie-parser')
 const authRoutes = require('./routes/auth')
 const userRoutes = require('./routes/users')
+const courseRoutes = require('./routes/courses')
+const attendanceRoutes = require('./routes/attendance')
+const gradeRoutes = require('./routes/grades')
 const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
@@ -23,6 +26,9 @@ app.use(cookieParser())
 // Routes
 app.use('/api/auth', authRoutes)
 app.use('/api/users', userRoutes)
+app.use('/api/courses', courseRoutes)
+app.use('/api/attendance', attendanceRoutes)
+app.use('/api/grades', gradeRoutes)
 
 // Health check — useful for deployment later
 app.get('/api/health', (req, res) => res.json({ status: 'ok' }))

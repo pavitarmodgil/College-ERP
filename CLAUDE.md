@@ -65,13 +65,50 @@ Roles: Student, Teacher, Admin, HOD, Principal.
  
 ## Current Phase
 > Update this section as you progress.
- 
+
 - [x] Phase 0 — Foundation (Git Flow, .env, bcrypt fix)
 - [x] Phase 1 — Database Architecture (Prisma schema design)
 - [x] Phase 2 — Authentication (JWT + OTP + Redis + CAPTCHA)
 - [x] Phase 3 — Frontend Upgrade (Vite + React + Tailwind)
-- [ ] Phase 4 — Features (timetable, grades, attendance, announcements)
+- [x] Phase 4 — Features
+  - [x] Course Management — CRUD, assign teachers, enroll students, self-enroll
+  - [x] Attendance — teacher marks sessions, student views percentage
+  - [x] Grades — teacher entry per component, auto letter grade, student GPA report
+  - [ ] Timetable / Announcements (not started)
 - [ ] Phase 5 — Deploy (Docker + GitHub Actions)
+
+## Phase 4 — What's Built
+
+### Grades (feat/phase4-course-management — latest commit)
+- `server/lib/gradeUtils.js` — `calculateLetterGrade` (O/A+/A/B+/B/C/P/F), `gradeToGPA` (10-point scale), `getPassStatus`
+- `server/controllers/gradeController.js` — 4 endpoints
+- `server/routes/grades.js` — registered at `/api/grades`
+- `client/src/pages/teacher/TeacherGradesPage.jsx` — course cards, progress bar, component pills
+- `client/src/pages/teacher/GradeEntryPage.jsx` — tab switcher (INTERNAL/MID_TERM/FINAL), bulk apply, per-student save
+- `client/src/pages/student/StudentGradesPage.jsx` — GPA banner, pass/fail/pending badges, per-component breakdown
+- Admin dashboard Departments stat card wired to real API
+
+### Grade API endpoints
+| Method | Path | Role | Purpose |
+|---|---|---|---|
+| GET | `/api/grades/courses` | TEACHER | Courses with grading progress + component status |
+| GET | `/api/grades/:courseId/students` | TEACHER | Enrolled students + their grades |
+| POST | `/api/grades/:courseId/students/:enrollmentId` | TEACHER | Upsert one component grade (letter grade auto-calculated) |
+| GET | `/api/grades/my` | STUDENT | Full grade report with GPA |
+
+### Letter grade scale
+| Marks | Grade | GPA |
+|---|---|---|
+| ≥80 | O | 10.0 |
+| ≥70 | A+ | 9.0 |
+| ≥65 | A | 8.0 |
+| ≥61 | B+ | 7.0 |
+| ≥50 | B | 6.0 |
+| ≥40 | C | 5.0 |
+| ≥35 | P | 4.0 |
+| <35 | F | 0.0 |
+
+GPA calculated from FINAL component only. Pass = any grade except F (P is a bare pass).
  
 ---
  

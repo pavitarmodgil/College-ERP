@@ -5,8 +5,15 @@ import LoginPage from './pages/LoginPage'
 import ResetPasswordPage from './pages/ResetPasswordPage'
 import AdminDashboard from './pages/AdminDashboard'
 import UsersPage from './pages/admin/UsersPage'
+import CoursesPage from './pages/admin/CoursesPage'
 import TeacherDashboard from './pages/TeacherDashboard'
+import TeacherAttendancePage from './pages/teacher/TeacherAttendancePage'
+import AttendanceSessionPage from './pages/teacher/AttendanceSessionPage'
+import TeacherGradesPage from './pages/teacher/TeacherGradesPage'
+import GradeEntryPage from './pages/teacher/GradeEntryPage'
 import StudentDashboard from './pages/StudentDashboard'
+import StudentAttendancePage from './pages/student/StudentAttendancePage'
+import StudentGradesPage from './pages/student/StudentGradesPage'
 
 export default function App() {
   return (
@@ -35,6 +42,14 @@ export default function App() {
             }
           />
           <Route
+            path="/admin/courses"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <CoursesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/teacher"
             element={
               <ProtectedRoute allowedRole="TEACHER">
@@ -43,10 +58,58 @@ export default function App() {
             }
           />
           <Route
+            path="/teacher/attendance"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <TeacherAttendancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/attendance/:courseId"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <AttendanceSessionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/student"
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/attendance"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentAttendancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grades"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <TeacherGradesPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/grades/:courseId"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <GradeEntryPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/grades"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentGradesPage />
               </ProtectedRoute>
             }
           />
