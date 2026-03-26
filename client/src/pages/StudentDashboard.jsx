@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
+import AnnouncementsWidget from '../components/AnnouncementsWidget'
 
 const courseCards = [
   {
@@ -306,6 +307,18 @@ export default function StudentDashboard() {
                 </button>
               </div>
             </div>
+          </div>
+
+          {/* Announcements Widget */}
+          <div className="bg-surface-container-lowest rounded-2xl p-8">
+            <div className="flex items-center justify-between mb-6">
+              <h3 className="text-2xl font-bold font-headline">Announcements</h3>
+              <a href="/student/announcements" className="text-sm font-bold text-primary hover:underline flex items-center gap-1">
+                View All
+                <span className="material-symbols-outlined text-sm">arrow_forward</span>
+              </a>
+            </div>
+            <AnnouncementsWidget limit={3} />
           </div>
 
           {/* Available Courses — self-enroll */}
