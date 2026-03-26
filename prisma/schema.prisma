@@ -24,6 +24,15 @@ enum GradeComponent {
   FINAL
 }
 
+enum DayOfWeek {
+  MON
+  TUE
+  WED
+  THU
+  FRI
+  SAT
+}
+
 model Department {
   id        Int      @id @default(autoincrement())
   name      String
@@ -47,6 +56,7 @@ model User {
   enrollments       Enrollment[]
   taughtCourses     CourseTeacher[]
   announcements     Announcement[]
+  timetableEntries  TimetableEntry[] @relation("TimetableTeacher")
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
 }
@@ -71,9 +81,10 @@ model Course {
   isActive     Boolean         @default(true)
   department   Department      @relation(fields: [departmentId], references: [id])
   departmentId Int
-  enrollments  Enrollment[]
-  teachers     CourseTeacher[]
-  createdAt    DateTime        @default(now())
+  enrollments       Enrollment[]
+  teachers          CourseTeacher[]
+  timetableEntries  TimetableEntry[]
+  createdAt         DateTime        @default(now())
 }
 
 model Enrollment {
@@ -120,4 +131,19 @@ model Grade {
   createdAt    DateTime       @default(now())
 
   @@unique([enrollmentId, component])
+}
+
+model TimetableEntry {
+  id        Int       @id @default(autoincrement())
+  course    Course    @relation(fields: [courseId], references: [id])
+  courseId  Int
+  teacher   User      @relation("TimetableTeacher", fields: [teacherId], references: [id])
+  teacherId Int
+  dayOfWeek DayOfWeek
+  startTime String    // "09:00"
+  endTime   String    // "10:00"
+  room      String
+  semester  String    // "2024-ODD" | "2024-EVEN" | "2025-ODD"
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }
