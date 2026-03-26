@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
+import api from '../lib/api'
 
 const courseCards = [
   {
@@ -41,6 +43,49 @@ export default function StudentDashboard() {
   const { user } = useAuth()
   const displayName = user?.studentId || user?.email?.split('@')[0] || 'Student'
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
+  const [availableCourses, setAvailableCourses] = useState([])
+  const [enrolledCount, setEnrolledCount] = useState(null)
+  const [enrollingId, setEnrollingId] = useState(null)
+  const [enrollMessage, setEnrollMessage] = useState('')
+
+  async function fetchAvailable() {
+    try {
+      const { data } = await api.get('/courses/available')
+      setAvailableCourses(data.courses)
+    } catch {
+      // non-fatal
+    }
+  }
+
+  async function fetchEnrolledCount() {
+    try {
+      const { data } = await api.get('/courses', { params: { limit: 1 } })
+      setEnrolledCount(data.total)
+    } catch {
+      // non-fatal
+    }
+  }
+
+  useEffect(() => {
+    fetchAvailable()
+    fetchEnrolledCount()
+  }, [])
+
+  async function handleEnroll(courseId) {
+    setEnrollingId(courseId)
+    setEnrollMessage('')
+    try {
+      await api.post(`/courses/${courseId}/enroll`)
+      setEnrollMessage('Enrolled successfully!')
+      fetchAvailable()
+      fetchEnrolledCount()
+    } catch (err) {
+      setEnrollMessage(err.response?.data?.error || 'Enrollment failed')
+    } finally {
+      setEnrollingId(null)
+    }
+  }
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
@@ -106,7 +151,7 @@ export default function StudentDashboard() {
                 <span className="text-[10px] font-bold text-slate-400 bg-slate-100 px-2 py-1 rounded-full">Enrolled</span>
               </div>
               <p className="text-slate-500 text-sm font-medium">Enrolled Courses</p>
-              <h3 className="text-3xl font-bold mt-1">—</h3>
+              <h3 className="text-3xl font-bold mt-1">{enrolledCount ?? '—'}</h3>
             </div>
 
             <div className="bg-surface-container-lowest p-6 rounded-2xl transition-transform hover:scale-[1.02] duration-300">
@@ -262,6 +307,52 @@ export default function StudentDashboard() {
               </div>
             </div>
           </div>
+
+          {/* Available Courses — self-enroll */}
+          {availableCourses.length > 0 && (
+            <div className="space-y-6">
+              <div className="flex items-end justify-between">
+                <div>
+                  <h3 className="text-2xl font-bold text-on-surface font-headline">Available Courses</h3>
+                  <p className="text-sm text-slate-500 mt-1 font-medium">Enroll in courses that interest you</p>
+                </div>
+                {enrollMessage && (
+                  <span className={`text-sm font-bold px-4 py-2 rounded-full ${
+                    enrollMessage.includes('success') ? 'bg-emerald-50 text-emerald-600' : 'bg-error-container/30 text-error'
+                  }`}>
+                    {enrollMessage}
+                  </span>
+                )}
+              </div>
+              <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                {availableCourses.map((c) => (
+                  <div key={c.id} className="bg-surface-container-lowest p-6 rounded-2xl space-y-4 hover:scale-[1.01] transition-transform">
+                    <div className="flex items-start justify-between">
+                      <div>
+                        <span className={`text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider uppercase ${
+                          c.type === 'MANDATORY' ? 'bg-primary/10 text-primary' : 'bg-tertiary/10 text-tertiary'
+                        }`}>
+                          {c.code}
+                        </span>
+                        <h4 className="text-base font-bold mt-2 font-headline leading-tight">{c.name}</h4>
+                      </div>
+                    </div>
+                    <div className="flex items-center justify-between text-xs text-on-surface-variant">
+                      <span>{c.department?.name || '—'}</span>
+                      <span className="font-semibold">{c.credits} credits</span>
+                    </div>
+                    <button
+                      onClick={() => handleEnroll(c.id)}
+                      disabled={enrollingId === c.id}
+                      className="w-full py-2.5 bg-primary-container text-on-primary font-bold rounded-full text-sm hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-60"
+                    >
+                      {enrollingId === c.id ? 'Enrolling…' : 'Enroll'}
+                    </button>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </section>
 
         {/* FAB */}

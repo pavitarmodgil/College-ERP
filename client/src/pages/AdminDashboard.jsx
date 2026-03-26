@@ -1,5 +1,7 @@
+import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
+import api from '../lib/api'
 
 const recentActivity = [
   { initials: 'JH', color: 'bg-indigo-100 text-indigo-600', name: 'Julianne Hayes', dept: 'Computer Science', course: 'CS102-Intro', status: 'Completed', statusColor: 'text-emerald-600', dot: 'bg-emerald-500', date: 'Oct 24, 2023' },
@@ -12,6 +14,26 @@ export default function AdminDashboard() {
   const { user } = useAuth()
   const displayName = user?.email?.split('@')[0] || 'Admin'
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
+
+  const [studentCount, setStudentCount] = useState(null)
+  const [teacherCount, setTeacherCount] = useState(null)
+  const [courseCount, setCourseCount] = useState(null)
+  const [deptCount, setDeptCount] = useState(null)
+
+  useEffect(() => {
+    api.get('/users', { params: { role: 'STUDENT', limit: 1 } })
+      .then(({ data }) => setStudentCount(data.total))
+      .catch(() => setStudentCount('—'))
+    api.get('/users', { params: { role: 'TEACHER', limit: 1 } })
+      .then(({ data }) => setTeacherCount(data.total))
+      .catch(() => setTeacherCount('—'))
+    api.get('/courses', { params: { limit: 1 } })
+      .then(({ data }) => setCourseCount(data.total))
+      .catch(() => setCourseCount('—'))
+    api.get('/users/departments')
+      .then(({ data }) => setDeptCount(data.length))
+      .catch(() => setDeptCount('—'))
+  }, [])
 
   return (
     <div className="flex min-h-screen bg-surface text-on-surface">
@@ -70,7 +92,7 @@ export default function AdminDashboard() {
                 <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded-full">+12%</span>
               </div>
               <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Total Students</p>
-              <h3 className="text-3xl font-bold font-headline">—</h3>
+              <h3 className="text-3xl font-bold font-headline">{studentCount ?? '…'}</h3>
             </div>
 
             {/* Total Teachers */}
@@ -82,7 +104,7 @@ export default function AdminDashboard() {
                 <span className="text-slate-400 text-xs font-bold bg-slate-50 px-2 py-1 rounded-full">Steady</span>
               </div>
               <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Total Teachers</p>
-              <h3 className="text-3xl font-bold font-headline">—</h3>
+              <h3 className="text-3xl font-bold font-headline">{teacherCount ?? '…'}</h3>
             </div>
 
             {/* Active Courses */}
@@ -94,7 +116,7 @@ export default function AdminDashboard() {
                 <span className="text-amber-600 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">Active</span>
               </div>
               <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Active Courses</p>
-              <h3 className="text-3xl font-bold font-headline">—</h3>
+              <h3 className="text-3xl font-bold font-headline">{courseCount ?? '…'}</h3>
             </div>
 
             {/* Departments */}
@@ -106,7 +128,7 @@ export default function AdminDashboard() {
                 <span className="text-indigo-600 text-xs font-bold bg-indigo-50 px-2 py-1 rounded-full">Global</span>
               </div>
               <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Departments</p>
-              <h3 className="text-3xl font-bold font-headline">—</h3>
+              <h3 className="text-3xl font-bold font-headline">{deptCount ?? '…'}</h3>
             </div>
           </div>
 
