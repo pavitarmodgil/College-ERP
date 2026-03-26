@@ -3,7 +3,7 @@ const router = express.Router()
 const {
   getUsers, getUserById, createUser,
   updateUser, deactivateUser, adminResetPassword,
-  getDepartments,
+  getDepartments, getRecentActivity,
 } = require('../controllers/userController')
 const { authGuard, requireRole } = require('../middleware/authGuard')
 
@@ -11,8 +11,9 @@ const { authGuard, requireRole } = require('../middleware/authGuard')
 // authGuard runs first (checks JWT), then requireRole (checks role)
 router.use(authGuard, requireRole('ADMIN'))
 
-// /departments must come before /:id to avoid "departments" being treated as an id
+// static paths must come before /:id to avoid string segments being treated as an id
 router.get('/departments', getDepartments)
+router.get('/recent-activity', getRecentActivity)
 router.get('/', getUsers)
 router.get('/:id', getUserById)
 router.post('/', createUser)

@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import api from '../lib/api'
+import AnnouncementDetailModal from './AnnouncementDetailModal'
 
 const ROLE_BADGE = {
   ALL:     { label: 'Everyone',      cls: 'bg-primary-fixed text-primary' },
@@ -25,6 +26,7 @@ function Skeleton() {
 export default function AnnouncementsWidget({ limit = 3 }) {
   const [items,   setItems]   = useState([])
   const [loading, setLoading] = useState(true)
+  const [selected, setSelected] = useState(null)
 
   useEffect(() => {
     api.get('/announcements', { params: { limit } })
@@ -45,23 +47,33 @@ export default function AnnouncementsWidget({ limit = 3 }) {
   }
 
   return (
-    <div className="space-y-4">
-      {items.map((a) => {
-        const badge = ROLE_BADGE[a.targetRole] || ROLE_BADGE.ALL
-        const date  = new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
-        return (
-          <div key={a.id} className="bg-surface-container-low rounded-xl p-4 space-y-2 hover:bg-surface-container transition-colors">
-            <div className="flex items-start justify-between gap-2">
-              <p className="text-sm font-bold text-on-surface leading-snug line-clamp-2">{a.title}</p>
-              <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>
-                {badge.label}
-              </span>
+    <>
+      <div className="space-y-4">
+        {items.map((a) => {
+          const badge = ROLE_BADGE[a.targetRole] || ROLE_BADGE.ALL
+          const date  = new Date(a.createdAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+          return (
+            <div
+              key={a.id}
+              onClick={() => setSelected(a)}
+              className="bg-surface-container-low rounded-xl p-4 space-y-2 hover:bg-surface-container transition-colors cursor-pointer"
+            >
+              <div className="flex items-start justify-between gap-2">
+                <p className="text-sm font-bold text-on-surface leading-snug line-clamp-2">{a.title}</p>
+                <span className={`flex-shrink-0 text-[10px] font-bold px-2 py-0.5 rounded-full ${badge.cls}`}>
+                  {badge.label}
+                </span>
+              </div>
+              <p className="text-xs text-on-surface-variant line-clamp-2">{a.body}</p>
+              <p className="text-[10px] text-outline font-medium">{date}</p>
             </div>
-            <p className="text-xs text-on-surface-variant line-clamp-2">{a.body}</p>
-            <p className="text-[10px] text-outline font-medium">{date}</p>
-          </div>
-        )
-      })}
-    </div>
+          )
+        })}
+      </div>
+
+      {selected && (
+        <AnnouncementDetailModal announcement={selected} onClose={() => setSelected(null)} />
+      )}
+    </>
   )
 }

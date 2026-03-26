@@ -4,12 +4,27 @@ import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 import AnnouncementsWidget from '../components/AnnouncementsWidget'
 
-const recentActivity = [
-  { initials: 'JH', color: 'bg-indigo-100 text-indigo-600', name: 'Julianne Hayes', dept: 'Computer Science', course: 'CS102-Intro', status: 'Completed', statusColor: 'text-emerald-600', dot: 'bg-emerald-500', date: 'Oct 24, 2023' },
-  { initials: 'MR', color: 'bg-amber-100 text-amber-700', name: 'Marcus Reed', dept: 'Visual Arts', course: 'ART-404-Des', status: 'Pending', statusColor: 'text-amber-600', dot: 'bg-amber-500', date: 'Oct 23, 2023' },
-  { initials: 'SK', color: 'bg-blue-100 text-blue-600', name: 'Sarah Kim', dept: 'Economics', course: 'ECO-201-Macro', status: 'Processing', statusColor: 'text-indigo-600', dot: 'bg-indigo-500', date: 'Oct 23, 2023' },
-  { initials: 'BT', color: 'bg-rose-100 text-rose-600', name: 'Bradley Thompson', dept: 'Physical Therapy', course: 'PHY-300-Kin', status: 'Completed', statusColor: 'text-emerald-600', dot: 'bg-emerald-500', date: 'Oct 22, 2023' },
+const STATUS_STYLES = {
+  Completed:  { color: 'text-emerald-600', dot: 'bg-emerald-500' },
+  Processing: { color: 'text-indigo-600',  dot: 'bg-indigo-500'  },
+  Pending:    { color: 'text-amber-600',   dot: 'bg-amber-500'   },
+}
+
+const AVATAR_COLORS = [
+  'bg-indigo-100 text-indigo-600',
+  'bg-amber-100 text-amber-700',
+  'bg-blue-100 text-blue-600',
+  'bg-rose-100 text-rose-600',
+  'bg-emerald-100 text-emerald-700',
+  'bg-purple-100 text-purple-600',
+  'bg-teal-100 text-teal-700',
+  'bg-orange-100 text-orange-700',
 ]
+
+function avatarColor(initials) {
+  const idx = (initials.charCodeAt(0) + (initials.charCodeAt(1) || 0)) % AVATAR_COLORS.length
+  return AVATAR_COLORS[idx]
+}
 
 export default function AdminDashboard() {
   const { user } = useAuth()
@@ -20,6 +35,13 @@ export default function AdminDashboard() {
   const [teacherCount, setTeacherCount] = useState(null)
   const [courseCount, setCourseCount] = useState(null)
   const [deptCount, setDeptCount] = useState(null)
+  const [recentActivity, setRecentActivity] = useState([])
+
+  useEffect(() => {
+    api.get('/users/recent-activity')
+      .then(({ data }) => setRecentActivity(data))
+      .catch(() => {})
+  }, [])
 
   useEffect(() => {
     api.get('/users', { params: { role: 'STUDENT', limit: 1 } })
@@ -155,34 +177,43 @@ export default function AdminDashboard() {
                     </tr>
                   </thead>
                   <tbody>
-                    {recentActivity.map((row) => (
-                      <tr
-                        key={row.name}
-                        className="bg-surface-container-lowest rounded-xl transition-all hover:scale-[1.01] hover:shadow-sm"
-                      >
-                        <td className="px-6 py-4 rounded-l-xl">
-                          <div className="flex items-center gap-3">
-                            <div className={`w-8 h-8 ${row.color} rounded-full flex items-center justify-center font-bold text-xs`}>
-                              {row.initials}
-                            </div>
-                            <span className="font-semibold text-sm">{row.name}</span>
-                          </div>
-                        </td>
-                        <td className="px-6 py-4 text-sm text-slate-600">{row.dept}</td>
-                        <td className="px-6 py-4">
-                          <span className="text-xs px-3 py-1 bg-slate-100 rounded-full font-medium">{row.course}</span>
-                        </td>
-                        <td className="px-6 py-4">
-                          <span className={`flex items-center gap-1.5 text-xs ${row.statusColor} font-bold uppercase`}>
-                            <span className={`w-2 h-2 rounded-full ${row.dot}`} />
-                            {row.status}
-                          </span>
-                        </td>
-                        <td className="px-6 py-4 text-right text-xs text-slate-400 font-medium rounded-r-xl">
-                          {row.date}
+                    {recentActivity.length === 0 ? (
+                      <tr>
+                        <td colSpan={5} className="px-6 py-8 text-center text-sm text-slate-400">
+                          No enrollment activity yet
                         </td>
                       </tr>
-                    ))}
+                    ) : recentActivity.map((row, idx) => {
+                      const style = STATUS_STYLES[row.status] || STATUS_STYLES.Pending
+                      return (
+                        <tr
+                          key={idx}
+                          className="bg-surface-container-lowest rounded-xl transition-all hover:scale-[1.01] hover:shadow-sm"
+                        >
+                          <td className="px-6 py-4 rounded-l-xl">
+                            <div className="flex items-center gap-3">
+                              <div className={`w-8 h-8 ${avatarColor(row.initials)} rounded-full flex items-center justify-center font-bold text-xs`}>
+                                {row.initials}
+                              </div>
+                              <span className="font-semibold text-sm">{row.name}</span>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 text-sm text-slate-600">{row.dept}</td>
+                          <td className="px-6 py-4">
+                            <span className="text-xs px-3 py-1 bg-slate-100 rounded-full font-medium">{row.course}</span>
+                          </td>
+                          <td className="px-6 py-4">
+                            <span className={`flex items-center gap-1.5 text-xs ${style.color} font-bold uppercase`}>
+                              <span className={`w-2 h-2 rounded-full ${style.dot}`} />
+                              {row.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 text-right text-xs text-slate-400 font-medium rounded-r-xl">
+                            {row.date}
+                          </td>
+                        </tr>
+                      )
+                    })}
                   </tbody>
                 </table>
               </div>

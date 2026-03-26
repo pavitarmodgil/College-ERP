@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Sidebar from '../../components/Sidebar'
 import AnnouncementFormModal from '../../components/AnnouncementFormModal'
+import AnnouncementDetailModal from '../../components/AnnouncementDetailModal'
 import api from '../../lib/api'
 
 const FILTERS = [
@@ -26,7 +27,8 @@ export default function AdminAnnouncementsPage() {
   const [page,    setPage]    = useState(1)
   const [filter,  setFilter]  = useState('ALL_FILTER')
   const [loading, setLoading] = useState(true)
-  const [modal,   setModal]   = useState(null) // null | 'create' | announcement object
+  const [modal,    setModal]    = useState(null) // null | 'create' | announcement object
+  const [viewing,  setViewing]  = useState(null)
 
   const fetchAnnouncements = useCallback(() => {
     setLoading(true)
@@ -161,14 +163,21 @@ export default function AdminAnnouncementsPage() {
                           <td className="px-6 py-4 text-right rounded-r-xl">
                             <div className="flex items-center justify-end gap-2">
                               <button
-                                onClick={() => setModal(a)}
+                                onClick={(e) => { e.stopPropagation(); setViewing(a) }}
+                                className="p-2 text-on-surface-variant hover:text-secondary hover:bg-secondary-fixed rounded-lg transition-colors"
+                                title="View"
+                              >
+                                <span className="material-symbols-outlined text-lg">visibility</span>
+                              </button>
+                              <button
+                                onClick={(e) => { e.stopPropagation(); setModal(a) }}
                                 className="p-2 text-on-surface-variant hover:text-primary hover:bg-primary-fixed rounded-lg transition-colors"
                                 title="Edit"
                               >
                                 <span className="material-symbols-outlined text-lg">edit</span>
                               </button>
                               <button
-                                onClick={() => handleDelete(a.id)}
+                                onClick={(e) => { e.stopPropagation(); handleDelete(a.id) }}
                                 className="p-2 text-on-surface-variant hover:text-error hover:bg-error-container rounded-lg transition-colors"
                                 title="Delete"
                               >
@@ -236,13 +245,16 @@ export default function AdminAnnouncementsPage() {
         </div>
       </main>
 
-      {/* Modal */}
       {modal && (
         <AnnouncementFormModal
           announcement={modal === 'create' ? null : modal}
           onClose={() => setModal(null)}
           onSaved={handleSaved}
         />
+      )}
+
+      {viewing && (
+        <AnnouncementDetailModal announcement={viewing} onClose={() => setViewing(null)} />
       )}
     </div>
   )

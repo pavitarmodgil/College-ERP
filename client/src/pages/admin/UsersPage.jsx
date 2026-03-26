@@ -4,7 +4,7 @@ import UserModal from '../../components/UserModal'
 import DeactivateConfirmModal from '../../components/DeactivateConfirmModal'
 import api from '../../lib/api'
 
-const LIMIT = 20
+const LIMIT = 5
 
 // Derive display initials from email (e.g. "aman.kumar@uni.com" → "AK")
 function getInitials(email) {

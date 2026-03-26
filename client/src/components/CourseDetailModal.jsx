@@ -6,13 +6,17 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState('')
 
+  // All teachers/students for dropdowns
+  const [allTeachers, setAllTeachers] = useState([])
+  const [allStudents, setAllStudents] = useState([])
+
   // Assign teacher
-  const [teacherEmail, setTeacherEmail] = useState('')
+  const [teacherUserId, setTeacherUserId] = useState('')
   const [teacherError, setTeacherError] = useState('')
   const [teacherLoading, setTeacherLoading] = useState(false)
 
   // Enroll student
-  const [studentEmail, setStudentEmail] = useState('')
+  const [studentUserId, setStudentUserId] = useState('')
   const [studentError, setStudentError] = useState('')
   const [studentLoading, setStudentLoading] = useState(false)
 
@@ -29,19 +33,25 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
     }
   }
 
-  useEffect(() => { fetchDetail() }, [courseId])
+  useEffect(() => {
+    fetchDetail()
+    // Fetch all teachers and students in parallel for dropdowns
+    api.get('/users', { params: { role: 'TEACHER', limit: 200 } })
+      .then(({ data }) => setAllTeachers(data.data || []))
+      .catch(() => {})
+    api.get('/users', { params: { role: 'STUDENT', limit: 500 } })
+      .then(({ data }) => setAllStudents(data.data || []))
+      .catch(() => {})
+  }, [courseId])
 
   async function handleAssignTeacher(e) {
     e.preventDefault()
+    if (!teacherUserId) return
     setTeacherError('')
     setTeacherLoading(true)
     try {
-      // Find user by email first
-      const { data: users } = await api.get('/users', { params: { email: teacherEmail, role: 'TEACHER', limit: 1 } })
-      const teacher = users.data?.[0]
-      if (!teacher) { setTeacherError('Teacher not found'); return }
-      await api.post(`/courses/${courseId}/teachers`, { userId: teacher.id })
-      setTeacherEmail('')
+      await api.post(`/courses/${courseId}/teachers`, { userId: parseInt(teacherUserId) })
+      setTeacherUserId('')
       fetchDetail()
       onRefresh?.()
     } catch (err) {
@@ -63,14 +73,12 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
 
   async function handleEnrollStudent(e) {
     e.preventDefault()
+    if (!studentUserId) return
     setStudentError('')
     setStudentLoading(true)
     try {
-      const { data: users } = await api.get('/users', { params: { email: studentEmail, role: 'STUDENT', limit: 1 } })
-      const student = users.data?.[0]
-      if (!student) { setStudentError('Student not found'); return }
-      await api.post(`/courses/${courseId}/enrollments`, { userId: student.id })
-      setStudentEmail('')
+      await api.post(`/courses/${courseId}/enrollments`, { userId: parseInt(studentUserId) })
+      setStudentUserId('')
       fetchDetail()
       onRefresh?.()
     } catch (err) {
@@ -93,6 +101,13 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
   function handleBackdrop(e) {
     if (e.target === e.currentTarget) onClose()
   }
+
+  // Filter out already-assigned teachers/students from dropdowns
+  const assignedTeacherIds = new Set(course?.teachers?.map((t) => t.teacher.id) || [])
+  const enrolledStudentIds = new Set(course?.enrollments?.map((e) => e.user.id) || [])
+
+  const availableTeachers = allTeachers.filter((t) => !assignedTeacherIds.has(t.id))
+  const availableStudents = allStudents.filter((s) => !enrolledStudentIds.has(s.id))
 
   return (
     <div
@@ -133,7 +148,7 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
               {[
                 { label: 'Code', value: course.code },
                 { label: 'Type', value: course.type.charAt(0) + course.type.slice(1).toLowerCase() },
-                { label: 'Credits', value: `${course.credits} cr` },
+                { label: 'Credits', value: course.credits },
                 { label: 'Department', value: course.department?.code || '—' },
               ].map(({ label, value }) => (
                 <div key={label} className="bg-surface-container-low rounded-xl p-4">
@@ -176,19 +191,24 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
                 </div>
               )}
 
-              {/* Assign teacher form */}
+              {/* Assign teacher — select dropdown */}
               <form onSubmit={handleAssignTeacher} className="flex gap-2">
-                <input
-                  type="email"
-                  value={teacherEmail}
-                  onChange={(e) => setTeacherEmail(e.target.value)}
-                  placeholder="Teacher email"
+                <select
+                  value={teacherUserId}
+                  onChange={(e) => setTeacherUserId(e.target.value)}
                   required
                   className="flex-1 px-4 py-2.5 bg-surface-container-high border-0 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none"
-                />
+                >
+                  <option value="">Select a teacher…</option>
+                  {availableTeachers.map((t) => (
+                    <option key={t.id} value={t.id}>
+                      {t.email}{t.teacherId ? ` (${t.teacherId})` : ''}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
-                  disabled={teacherLoading}
+                  disabled={teacherLoading || !teacherUserId}
                   className="px-5 py-2.5 bg-primary-container text-on-primary font-bold rounded-xl text-sm hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-60"
                 >
                   {teacherLoading ? '…' : 'Assign'}
@@ -232,19 +252,24 @@ export default function CourseDetailModal({ courseId, onClose, onRefresh }) {
                 </div>
               )}
 
-              {/* Enroll student form */}
+              {/* Enroll student — select dropdown */}
               <form onSubmit={handleEnrollStudent} className="flex gap-2">
-                <input
-                  type="email"
-                  value={studentEmail}
-                  onChange={(e) => setStudentEmail(e.target.value)}
-                  placeholder="Student email"
+                <select
+                  value={studentUserId}
+                  onChange={(e) => setStudentUserId(e.target.value)}
                   required
                   className="flex-1 px-4 py-2.5 bg-surface-container-high border-0 rounded-xl focus:ring-2 focus:ring-primary text-sm outline-none"
-                />
+                >
+                  <option value="">Select a student…</option>
+                  {availableStudents.map((s) => (
+                    <option key={s.id} value={s.id}>
+                      {s.email}{s.studentId ? ` (${s.studentId})` : ''}
+                    </option>
+                  ))}
+                </select>
                 <button
                   type="submit"
-                  disabled={studentLoading}
+                  disabled={studentLoading || !studentUserId}
                   className="px-5 py-2.5 bg-primary-container text-on-primary font-bold rounded-xl text-sm hover:scale-[1.02] active:scale-95 transition-transform disabled:opacity-60"
                 >
                   {studentLoading ? '…' : 'Enroll'}

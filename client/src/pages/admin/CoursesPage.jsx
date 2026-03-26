@@ -5,7 +5,7 @@ import CourseDetailModal from '../../components/CourseDetailModal'
 import DeactivateCourseModal from '../../components/DeactivateCourseModal'
 import api from '../../lib/api'
 
-const LIMIT = 20
+const LIMIT = 5
 
 const TYPE_STYLES = {
   MANDATORY: { pill: 'bg-primary/10 text-primary', label: 'Mandatory' },
@@ -238,7 +238,7 @@ export default function CoursesPage() {
                           {/* Credits */}
                           <td className="px-6 py-5">
                             <span className="text-sm font-semibold text-on-surface-variant">
-                              {c.credits} cr
+                              {c.credits}
                             </span>
                           </td>
 
