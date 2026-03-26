@@ -7,7 +7,10 @@ import AdminDashboard from './pages/AdminDashboard'
 import UsersPage from './pages/admin/UsersPage'
 import CoursesPage from './pages/admin/CoursesPage'
 import TeacherDashboard from './pages/TeacherDashboard'
+import TeacherAttendancePage from './pages/teacher/TeacherAttendancePage'
+import AttendanceSessionPage from './pages/teacher/AttendanceSessionPage'
 import StudentDashboard from './pages/StudentDashboard'
+import StudentAttendancePage from './pages/student/StudentAttendancePage'
 
 export default function App() {
   return (
@@ -52,10 +55,34 @@ export default function App() {
             }
           />
           <Route
+            path="/teacher/attendance"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <TeacherAttendancePage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/attendance/:courseId"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <AttendanceSessionPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
             path="/student"
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <StudentDashboard />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/attendance"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <StudentAttendancePage />
               </ProtectedRoute>
             }
           />
