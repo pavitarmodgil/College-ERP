@@ -46,8 +46,20 @@ model User {
   departmentId      Int?
   enrollments       Enrollment[]
   taughtCourses     CourseTeacher[]
+  announcements     Announcement[]
   createdAt         DateTime        @default(now())
   updatedAt         DateTime        @updatedAt
+}
+
+model Announcement {
+  id         Int      @id @default(autoincrement())
+  title      String
+  body       String   @db.Text
+  targetRole String   // "ALL" | "TEACHER" | "STUDENT" | "ADMIN"
+  author     User     @relation(fields: [authorId], references: [id])
+  authorId   Int
+  createdAt  DateTime @default(now())
+  updatedAt  DateTime @updatedAt
 }
 
 model Course {

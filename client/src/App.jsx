@@ -14,6 +14,8 @@ import GradeEntryPage from './pages/teacher/GradeEntryPage'
 import StudentDashboard from './pages/StudentDashboard'
 import StudentAttendancePage from './pages/student/StudentAttendancePage'
 import StudentGradesPage from './pages/student/StudentGradesPage'
+import AdminAnnouncementsPage from './pages/admin/AnnouncementsPage'
+import AnnouncementsPage from './pages/AnnouncementsPage'
 
 export default function App() {
   return (
@@ -110,6 +112,31 @@ export default function App() {
             element={
               <ProtectedRoute allowedRole="STUDENT">
                 <StudentGradesPage />
+              </ProtectedRoute>
+            }
+          />
+
+          <Route
+            path="/admin/announcements"
+            element={
+              <ProtectedRoute allowedRole="ADMIN">
+                <AdminAnnouncementsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/teacher/announcements"
+            element={
+              <ProtectedRoute allowedRole="TEACHER">
+                <AnnouncementsPage />
+              </ProtectedRoute>
+            }
+          />
+          <Route
+            path="/student/announcements"
+            element={
+              <ProtectedRoute allowedRole="STUDENT">
+                <AnnouncementsPage />
               </ProtectedRoute>
             }
           />

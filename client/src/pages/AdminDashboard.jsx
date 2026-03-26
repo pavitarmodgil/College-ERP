@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
+import AnnouncementsWidget from '../components/AnnouncementsWidget'
 
 const recentActivity = [
   { initials: 'JH', color: 'bg-indigo-100 text-indigo-600', name: 'Julianne Hayes', dept: 'Computer Science', course: 'CS102-Intro', status: 'Completed', statusColor: 'text-emerald-600', dot: 'bg-emerald-500', date: 'Oct 24, 2023' },
@@ -215,22 +216,15 @@ export default function AdminDashboard() {
                 </p>
               </div>
 
-              {/* Announcement Card */}
-              <div className="bg-primary-container rounded-xl overflow-hidden relative">
-                <div className="relative p-6 text-on-primary">
-                  <span className="bg-white/20 backdrop-blur-md px-3 py-1 rounded-full text-[10px] uppercase font-bold tracking-widest mb-4 inline-block">
-                    News
-                  </span>
-                  <h4 className="text-xl font-bold font-headline mb-2 leading-tight">
-                    Faculty Convocation Next Friday
-                  </h4>
-                  <p className="text-sm opacity-80 mb-6">
-                    Attendance is mandatory for all department heads. RSVP in the portal settings.
-                  </p>
-                  <button className="w-full py-3 bg-white text-primary font-bold rounded-xl transition-transform hover:scale-105">
-                    View Schedule
-                  </button>
+              {/* Announcements Widget */}
+              <div className="bg-surface-container-lowest rounded-xl p-6">
+                <div className="flex items-center justify-between mb-5">
+                  <h3 className="text-lg font-bold font-headline">Latest Announcements</h3>
+                  <a href="/admin/announcements" className="text-xs font-bold text-primary hover:underline">
+                    Manage
+                  </a>
                 </div>
+                <AnnouncementsWidget limit={3} />
               </div>
             </div>
           </div>

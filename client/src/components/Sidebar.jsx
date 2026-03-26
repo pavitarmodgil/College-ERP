@@ -11,6 +11,7 @@ const NAV_ICONS = {
   Grades: 'grade',
   'My Grades': 'grade',
   'My Attendance': 'event_available',
+  Announcements: 'campaign',
 }
 
 const NAV_LINKS = {
@@ -19,18 +20,21 @@ const NAV_LINKS = {
     { to: '/admin/users', label: 'Users' },
     { to: '/admin/courses', label: 'Courses' },
     { to: '/admin/departments', label: 'Departments' },
+    { to: '/admin/announcements', label: 'Announcements' },
   ],
   TEACHER: [
     { to: '/teacher', label: 'Dashboard' },
     { to: '/teacher/attendance', label: 'Attendance' },
     { to: '/teacher/grades', label: 'Grades' },
     { to: '/teacher/courses', label: 'Courses' },
+    { to: '/teacher/announcements', label: 'Announcements' },
   ],
   STUDENT: [
     { to: '/student', label: 'Dashboard' },
     { to: '/student/grades', label: 'My Grades' },
     { to: '/student/attendance', label: 'My Attendance' },
     { to: '/student/courses', label: 'Courses' },
+    { to: '/student/announcements', label: 'Announcements' },
   ],
 }
 

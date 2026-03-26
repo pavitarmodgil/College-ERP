@@ -1,5 +1,6 @@
 import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
+import AnnouncementsWidget from '../components/AnnouncementsWidget'
 
 const attendanceRows = [
   { name: 'Alexander Wright', email: 'alex.wright@university.edu', id: '#UG-2023-9481', gpa: '3.92', gpaColor: 'bg-primary-fixed text-primary', status: 'On Track', statusColor: 'text-emerald-600', statusDot: 'bg-emerald-500', present: true },
@@ -219,37 +220,15 @@ export default function TeacherDashboard() {
               </div>
             </div>
 
-            {/* Curriculum Progress Ring */}
-            <div className="bg-primary text-on-primary rounded-2xl p-8 flex flex-col justify-between relative overflow-hidden">
-              <div className="relative z-10">
-                <h3 className="text-xl font-bold mb-2 font-headline">Curriculum Progress</h3>
-                <p className="text-primary-fixed/80 text-sm font-medium">Mid-term Cycle 2024</p>
+            {/* Announcements Widget */}
+            <div className="bg-surface-container-lowest rounded-2xl p-8">
+              <div className="flex items-center justify-between mb-6">
+                <h3 className="text-xl font-bold font-headline">Announcements</h3>
+                <a href="/teacher/announcements" className="text-xs font-bold text-primary hover:underline">
+                  View All
+                </a>
               </div>
-              <div className="flex justify-center my-6 relative z-10">
-                <div className="relative w-32 h-32">
-                  <svg className="w-full h-full" viewBox="0 0 100 100">
-                    <circle cx="50" cy="50" r="40" fill="transparent" stroke="rgba(255,255,255,0.3)" strokeWidth="8" />
-                    <circle
-                      cx="50" cy="50" r="40"
-                      fill="transparent"
-                      stroke="white"
-                      strokeDasharray="251.2"
-                      strokeDashoffset="62.8"
-                      strokeLinecap="round"
-                      strokeWidth="8"
-                      style={{ transform: 'rotate(-90deg)', transformOrigin: '50% 50%' }}
-                    />
-                  </svg>
-                  <div className="absolute inset-0 flex flex-col items-center justify-center">
-                    <span className="text-2xl font-bold">75%</span>
-                    <span className="text-[10px] uppercase font-bold tracking-widest opacity-60">Complete</span>
-                  </div>
-                </div>
-              </div>
-              <button className="bg-white/10 backdrop-blur-md border border-white/20 text-white w-full py-3 rounded-xl text-sm font-bold hover:bg-white/20 transition-all z-10">
-                View Detailed Syllabus
-              </button>
-              <div className="absolute -bottom-10 -right-10 w-40 h-40 bg-white/5 rounded-full blur-3xl" />
+              <AnnouncementsWidget limit={3} />
             </div>
           </div>
         </div>
