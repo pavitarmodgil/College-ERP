@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import UserModal from '../../components/UserModal'
 import DeactivateConfirmModal from '../../components/DeactivateConfirmModal'
@@ -29,6 +30,7 @@ const AVATAR_COLORS = [
 ]
 
 export default function UsersPage() {
+  const navigate = useNavigate()
   const [users, setUsers] = useState([])
   const [total, setTotal] = useState(0)
   const [page, setPage] = useState(1)
@@ -232,9 +234,14 @@ export default function UsersPage() {
                       return (
                         <tr
                           key={u.id}
-                          className={`hover:bg-slate-50/50 transition-colors group ${
-                            idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low/30'
-                          }`}
+                          onClick={() => {
+                            if (u.role === 'STUDENT') navigate(`/admin/users/${u.id}/profile`)
+                          }}
+                          className={`transition-colors group ${
+                            u.role === 'STUDENT'
+                              ? 'cursor-pointer hover:bg-indigo-50/60 dark:hover:bg-indigo-900/20'
+                              : 'hover:bg-slate-50/50'
+                          } ${idx % 2 === 0 ? 'bg-surface-container-lowest' : 'bg-surface-container-low/30'}`}
                         >
                           {/* User */}
                           <td className="px-8 py-5">
@@ -243,9 +250,16 @@ export default function UsersPage() {
                                 {getInitials(u.email)}
                               </div>
                               <div>
-                                <p className="font-bold text-on-surface leading-tight capitalize">
-                                  {u.email.split('@')[0].replace(/[._-]/g, ' ')}
-                                </p>
+                                <div className="flex items-center gap-2">
+                                  <p className="font-bold text-on-surface leading-tight capitalize">
+                                    {u.email.split('@')[0].replace(/[._-]/g, ' ')}
+                                  </p>
+                                  {u.role === 'STUDENT' && (
+                                    <span className="material-symbols-outlined text-sm text-slate-300 group-hover:text-primary transition-colors">
+                                      chevron_right
+                                    </span>
+                                  )}
+                                </div>
                                 <p className="text-xs text-on-surface-variant">{u.email}</p>
                               </div>
                             </div>
@@ -284,8 +298,8 @@ export default function UsersPage() {
                             </div>
                           </td>
 
-                          {/* Actions */}
-                          <td className="px-8 py-5 text-right">
+                          {/* Actions — stopPropagation prevents row click from firing */}
+                          <td className="px-8 py-5 text-right" onClick={(e) => e.stopPropagation()}>
                             <div className="flex justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
                               <button
                                 onClick={() => { setEditingUser(u); setShowModal(true) }}
