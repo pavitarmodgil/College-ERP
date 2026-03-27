@@ -259,8 +259,60 @@ async function getDepartments(req, res, next) {
   }
 }
 
+// GET /api/users/recent-activity
+// Returns the 8 most recent enrollments for the admin dashboard activity table
+async function getRecentActivity(req, res, next) {
+  try {
+    const enrollments = await prisma.enrollment.findMany({
+      take: 8,
+      orderBy: { enrolledAt: 'desc' },
+      select: {
+        id: true,
+        enrolledAt: true,
+        user: {
+          select: {
+            firstName: true, lastName: true, email: true,
+            department: { select: { name: true } },
+          },
+        },
+        course: { select: { name: true, code: true } },
+        grades: { select: { component: true } },
+      },
+    })
+
+    const activity = enrollments.map((e) => {
+      const components = e.grades.map((g) => g.component)
+      let status = 'Pending'
+      if (components.includes('FINAL')) status = 'Completed'
+      else if (components.length > 0) status = 'Processing'
+
+      const name = e.user.firstName
+        ? `${e.user.firstName} ${e.user.lastName || ''}`.trim()
+        : e.user.email.split('@')[0].replace(/[._-]/g, ' ').replace(/\b\w/g, (c) => c.toUpperCase())
+
+      const words = name.trim().split(' ')
+      const initials = words.length >= 2
+        ? words[0][0].toUpperCase() + words[words.length - 1][0].toUpperCase()
+        : name.slice(0, 2).toUpperCase()
+
+      return {
+        initials,
+        name,
+        dept: e.user.department?.name || '—',
+        course: e.course.code,
+        status,
+        date: new Date(e.enrolledAt).toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
+      }
+    })
+
+    res.json(activity)
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getUsers, getUserById, createUser,
   updateUser, deactivateUser, adminResetPassword,
-  getDepartments,
+  getDepartments, getRecentActivity,
 }

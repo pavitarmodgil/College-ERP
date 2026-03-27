@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../components/Sidebar'
+import AnnouncementDetailModal from '../components/AnnouncementDetailModal'
 import api from '../lib/api'
 
 const ROLE_BADGE = {
@@ -12,10 +13,11 @@ const ROLE_BADGE = {
 const PAGE_SIZE = 10
 
 export default function AnnouncementsPage() {
-  const [items,   setItems]   = useState([])
-  const [total,   setTotal]   = useState(0)
-  const [page,    setPage]    = useState(1)
-  const [loading, setLoading] = useState(true)
+  const [items,    setItems]    = useState([])
+  const [total,    setTotal]    = useState(0)
+  const [page,     setPage]     = useState(1)
+  const [loading,  setLoading]  = useState(true)
+  const [selected, setSelected] = useState(null)
 
   useEffect(() => {
     setLoading(true)
@@ -70,7 +72,11 @@ export default function AnnouncementsPage() {
                   weekday: 'long', year: 'numeric', month: 'long', day: 'numeric',
                 })
                 return (
-                  <article key={a.id} className="bg-surface-container-lowest rounded-2xl p-8 space-y-4">
+                  <article
+                    key={a.id}
+                    onClick={() => setSelected(a)}
+                    className="bg-surface-container-lowest rounded-2xl p-8 space-y-4 cursor-pointer hover:bg-surface-container-low transition-colors"
+                  >
                     <div className="flex items-start justify-between gap-4">
                       <h2 className="text-xl font-bold font-headline text-on-surface leading-snug">
                         {a.title}
@@ -119,6 +125,10 @@ export default function AnnouncementsPage() {
           )}
         </div>
       </main>
+
+      {selected && (
+        <AnnouncementDetailModal announcement={selected} onClose={() => setSelected(null)} />
+      )}
     </div>
   )
 }
