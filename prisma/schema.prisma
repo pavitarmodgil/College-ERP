@@ -45,6 +45,8 @@ model Department {
 model User {
   id                Int             @id @default(autoincrement())
   email             String          @unique
+  firstName         String?
+  lastName          String?
   password          String
   role              Role
   studentId         String?         @unique

@@ -47,6 +47,8 @@ async function getUsers(req, res, next) {
         select: {
           id: true,
           email: true,
+          firstName: true,
+          lastName: true,
           role: true,
           studentId: true,
           teacherId: true,
@@ -80,6 +82,8 @@ async function getUserById(req, res, next) {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         role: true,
         studentId: true,
         teacherId: true,
@@ -100,7 +104,7 @@ async function getUserById(req, res, next) {
 // POST /api/users
 async function createUser(req, res, next) {
   try {
-    const { email, password, role, departmentId } = req.body
+    const { email, password, role, departmentId, firstName, lastName } = req.body
 
     if (!email || !password || !role) {
       return res.status(400).json({ error: 'email, password and role are required' })
@@ -124,6 +128,8 @@ async function createUser(req, res, next) {
     const user = await prisma.user.create({
       data: {
         email,
+        firstName: firstName?.trim() || null,
+        lastName: lastName?.trim() || null,
         password: hashedPassword,
         role,
         studentId: role === 'STUDENT' ? autoId : null,
@@ -134,6 +140,8 @@ async function createUser(req, res, next) {
       select: {
         id: true,
         email: true,
+        firstName: true,
+        lastName: true,
         role: true,
         studentId: true,
         teacherId: true,
@@ -151,7 +159,7 @@ async function createUser(req, res, next) {
 // PATCH /api/users/:id
 async function updateUser(req, res, next) {
   try {
-    const { email, departmentId, password } = req.body
+    const { email, departmentId, password, firstName, lastName } = req.body
     const userId = parseInt(req.params.id)
 
     // Prevent editing own account via this endpoint
@@ -168,6 +176,8 @@ async function updateUser(req, res, next) {
     if (departmentId !== undefined) {
       updateData.departmentId = departmentId ? parseInt(departmentId) : null
     }
+    if (firstName !== undefined) updateData.firstName = firstName?.trim() || null
+    if (lastName !== undefined) updateData.lastName = lastName?.trim() || null
     if (password) {
       updateData.password = await bcrypt.hash(password, 12)
     }
