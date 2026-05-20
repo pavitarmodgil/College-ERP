@@ -2,7 +2,7 @@ const prisma = require('../lib/prisma')
 
 // Helper: get today's date as midnight UTC (DATE only, no time)
 // WHY: Prisma normalises @db.Date values to midnight UTC when reading
-// back from MySQL. setHours(0,0,0,0) uses the server's LOCAL timezone,
+// back from the database. setHours(0,0,0,0) uses the server's LOCAL timezone,
 // producing e.g. 18:30:00Z on UTC+5:30 — which never matches the stored
 // 00:00:00Z. Date.UTC() builds the midnight UTC timestamp directly from
 // the current UTC calendar date, so writes and reads always agree.
@@ -203,28 +203,35 @@ async function getSessionHistory(req, res, next) {
       return res.status(403).json({ error: 'You are not assigned to this course' })
     }
 
-    // WHY raw groupBy approach: Prisma 5 groupBy works for this case
-    const records = await prisma.attendance.groupBy({
-      by: ['date'],
-      where: {
-        enrollment: { courseId },
-      },
-      _count: { present: true },
-      _sum: { present: true },
-      orderBy: { date: 'desc' },
-    })
+    // WHY findMany + JS aggregation instead of groupBy with _sum:
+    // PostgreSQL does not allow SUM(boolean) — it requires an explicit cast.
+    // MySQL treats booleans as TINYINT so _sum worked there. Aggregating
+    // in JS keeps the query database-agnostic and avoids the runtime error.
+    const [allRecords, totalEnrolled] = await Promise.all([
+      prisma.attendance.findMany({
+        where: { enrollment: { courseId } },
+        select: { date: true, present: true },
+        orderBy: { date: 'desc' },
+      }),
+      prisma.enrollment.count({ where: { courseId } }),
+    ])
 
-    const totalEnrolled = await prisma.enrollment.count({
-      where: { courseId },
-    })
+    const dateMap = new Map()
+    for (const r of allRecords) {
+      const key = r.date.toISOString()
+      if (!dateMap.has(key)) dateMap.set(key, { date: r.date, total: 0, present: 0 })
+      const entry = dateMap.get(key)
+      entry.total++
+      if (r.present) entry.present++
+    }
 
-    const history = records.map((r) => ({
-      date: r.date,
-      totalStudents: r._count.present,
-      presentCount: r._sum.present,
-      absentCount: r._count.present - (r._sum.present || 0),
+    const history = [...dateMap.values()].map((e) => ({
+      date: e.date,
+      totalStudents: e.total,
+      presentCount: e.present,
+      absentCount: e.total - e.present,
       percentage: totalEnrolled > 0
-        ? Math.round(((r._sum.present || 0) / totalEnrolled) * 100)
+        ? Math.round((e.present / totalEnrolled) * 100)
         : 0,
     }))
 

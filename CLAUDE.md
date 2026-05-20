@@ -14,7 +14,7 @@ Built as a production-learning project — every pattern chosen to mirror indust
 | Backend | Node.js + Express | 4.x | Minimal, explicit, industry standard for REST APIs |
 | Frontend | React + Vite | React 19, Vite 8 | Fast HMR, ESM-native, component-driven |
 | Styling | Tailwind CSS + shadcn/ui | 4.x | Utility-first, zero runtime, composable primitives |
-| Relational DB | MySQL via Prisma ORM | Prisma **5.x** | Type-safe queries, schema-first migrations |
+| Relational DB | PostgreSQL via Prisma ORM | Prisma **5.x** | Type-safe queries, schema-first migrations |
 | Cache / OTP | Redis via ioredis | 5.x | Sub-millisecond TTL keys; OTP & rate-limit state |
 | Auth | JWT + bcrypt + OTP | JWT 9.x, bcrypt 6.x | Stateless access token + httpOnly refresh cookie |
 | Email | Nodemailer (Gmail) | 8.x | OTP delivery; swappable transport |
@@ -93,8 +93,8 @@ Users get `isActive: false`. Courses get `isActive: false`. Hard-deleting a user
 ### 4. Silent Token Refresh via Axios Interceptor
 `client/src/lib/api.js` queues all in-flight requests on a 401, fires exactly one `/auth/refresh`, then replays the queue with the new token. A user with an expired access token never sees an error — the refresh is invisible. The refresh token lives in an `httpOnly` cookie (inaccessible to JavaScript).
 
-### 5. OTP in Redis, Not MySQL
-OTPs are ephemeral — 5-minute TTL, single-use, per-email. Redis handles TTL natively via `EX 300`. Storing OTPs in MySQL would require a cron job for cleanup and would add write churn on an unrelated table.
+### 5. OTP in Redis, Not the Database
+OTPs are ephemeral — 5-minute TTL, single-use, per-email. Redis handles TTL natively via `EX 300`. Storing OTPs in PostgreSQL would require a cron job for cleanup and would add write churn on an unrelated table.
 
 ### 6. Upsert Pattern for Grades and Attendance
 Both models use `@@unique` composite constraints + Prisma `upsert()`. Re-submitting a grade for the same component, or attendance for the same date, updates the existing row — never creates a duplicate. This makes teacher UIs idempotent.
@@ -302,7 +302,7 @@ npx prisma generate                               # regenerate client after sche
 
 **Required `.env` variables** (see `.env.example` for full list):
 ```
-DATABASE_URL            MySQL connection string
+DATABASE_URL            PostgreSQL connection string
 JWT_SECRET              Long random string — signs access tokens
 JWT_REFRESH_SECRET      Different long random string — signs refresh tokens
 REDIS_URL               Redis connection string

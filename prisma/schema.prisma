@@ -3,7 +3,7 @@ generator client {
 }
 
 datasource db {
-  provider = "mysql"
+  provider = "postgresql"
   url      = env("DATABASE_URL")
 }
 
@@ -43,31 +43,31 @@ model Department {
 }
 
 model User {
-  id                Int             @id @default(autoincrement())
-  email             String          @unique
+  id                Int              @id @default(autoincrement())
+  email             String           @unique
   firstName         String?
   lastName          String?
   password          String
   role              Role
-  studentId         String?         @unique
-  teacherId         String?         @unique
-  mustResetPassword Boolean         @default(false)
-  isActive          Boolean         @default(true)
-  department        Department?     @relation(fields: [departmentId], references: [id])
+  studentId         String?          @unique
+  teacherId         String?          @unique
+  mustResetPassword Boolean          @default(false)
+  isActive          Boolean          @default(true)
+  department        Department?      @relation(fields: [departmentId], references: [id])
   departmentId      Int?
   enrollments       Enrollment[]
   taughtCourses     CourseTeacher[]
   announcements     Announcement[]
   timetableEntries  TimetableEntry[] @relation("TimetableTeacher")
-  createdAt         DateTime        @default(now())
-  updatedAt         DateTime        @updatedAt
+  createdAt         DateTime         @default(now())
+  updatedAt         DateTime         @updatedAt
 }
 
 model Announcement {
   id         Int      @id @default(autoincrement())
   title      String
   body       String   @db.Text
-  targetRole String   // "ALL" | "TEACHER" | "STUDENT" | "ADMIN"
+  targetRole String // "ALL" | "TEACHER" | "STUDENT" | "ADMIN"
   author     User     @relation(fields: [authorId], references: [id])
   authorId   Int
   createdAt  DateTime @default(now())
@@ -75,18 +75,18 @@ model Announcement {
 }
 
 model Course {
-  id           Int             @id @default(autoincrement())
-  name         String
-  code         String          @unique
-  type         CourseType
-  credits      Int             @default(3)
-  isActive     Boolean         @default(true)
-  department   Department      @relation(fields: [departmentId], references: [id])
-  departmentId Int
-  enrollments       Enrollment[]
-  teachers          CourseTeacher[]
-  timetableEntries  TimetableEntry[]
-  createdAt         DateTime        @default(now())
+  id               Int              @id @default(autoincrement())
+  name             String
+  code             String           @unique
+  type             CourseType
+  credits          Int              @default(3)
+  isActive         Boolean          @default(true)
+  department       Department       @relation(fields: [departmentId], references: [id])
+  departmentId     Int
+  enrollments      Enrollment[]
+  teachers         CourseTeacher[]
+  timetableEntries TimetableEntry[]
+  createdAt        DateTime         @default(now())
 }
 
 model Enrollment {
@@ -142,10 +142,10 @@ model TimetableEntry {
   teacher   User      @relation("TimetableTeacher", fields: [teacherId], references: [id])
   teacherId Int
   dayOfWeek DayOfWeek
-  startTime String    // "09:00"
-  endTime   String    // "10:00"
+  startTime String // "09:00"
+  endTime   String // "10:00"
   room      String
-  semester  String    // "2024-ODD" | "2024-EVEN" | "2025-ODD"
+  semester  String // "2024-ODD" | "2024-EVEN" | "2025-ODD"
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
 }

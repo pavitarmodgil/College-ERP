@@ -10,7 +10,7 @@ A full-stack, role-based University Management System built with production-grad
 |---|---|
 | **Frontend** | React 19 + Vite 8 + Tailwind CSS + Material Symbols |
 | **Backend** | Node.js + Express (REST API, JSON only) |
-| **Database** | MySQL via Prisma ORM (9 models, 4 enums) |
+| **Database** | PostgreSQL via Prisma ORM (9 models, 4 enums) |
 | **Cache** | Redis (ioredis) — OTP storage, rate limiting |
 | **Auth** | JWT (access + refresh tokens) + bcrypt + 6-digit OTP |
 | **Email** | Nodemailer (Gmail SMTP) |
@@ -22,7 +22,7 @@ A full-stack, role-based University Management System built with production-grad
 
 ### Prerequisites
 - Node.js 18+
-- MySQL 8+
+- PostgreSQL 14+
 - Redis server
 - Gmail account with App Password (for OTP emails)
 - hCaptcha site key + secret
@@ -38,7 +38,7 @@ cd client && npm install && cd ..
 
 # 2. Configure environment
 cp .env.example .env
-# Edit .env with your MySQL, Redis, Gmail, hCaptcha, and JWT secrets
+# Edit .env with your PostgreSQL, Redis, Gmail, hCaptcha, and JWT secrets
 
 # 3. Set up the database
 npx prisma migrate deploy

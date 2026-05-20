@@ -12,7 +12,7 @@ Full-stack University Management System. Three roles: Admin, Teacher, Student.
 
 - **Backend:** Node.js + Express (REST API, JSON only)
 - **Frontend:** React 19 + Vite + Tailwind CSS + shadcn/ui
-- **DB:** MySQL via Prisma ORM 5.x (pinned — do not upgrade to 7.x)
+- **DB:** PostgreSQL via Prisma ORM 5.x (pinned — do not upgrade to 7.x)
 - **Cache / OTP:** Redis via ioredis
 - **Auth:** JWT (15 min) + httpOnly refresh cookie (7 days) + Email OTP + hCaptcha
 
@@ -41,7 +41,7 @@ Role is always read from the DB, never trusted from the frontend.
 
 ---
 
-## Database — 9 Models (Prisma + MySQL)
+## Database — 9 Models (Prisma + PostgreSQL)
 
 **Core relationships:**
 ```
