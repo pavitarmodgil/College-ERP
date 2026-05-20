@@ -1,154 +1,130 @@
-# University Management System — Project Context
+# University Management System — Session Context
 
 > **How to use this file:**
-> Keep this in your project root. Update "Current State" after every work session.
-> Paste into Claude Chat, Claude Code, or Cowork at the start of each session.
+> Paste into Claude Code at the start of each session.
+> Update "Current State" after every work session so the next session starts with accurate context.
 
 ---
 
 ## Project Overview
 
-Full-stack University Management System — production-learning project.
+Full-stack University Management System. Three roles: Admin, Teacher, Student.
 
-- **Backend:** Node.js + Express (REST API)
-- **Frontend:** React (Vite) + Tailwind + shadcn/ui *(Phase 3)*
-- **Primary DB:** MySQL via Prisma ORM 5.x
-- **Document DB:** MongoDB — profiles, announcements *(Phase 1 partial)*
-- **Cache/OTP:** Redis via ioredis *(Phase 2)*
-- **Auth:** JWT + refresh token + Email OTP + hCaptcha *(Phase 2)*
-
----
-
-## User Roles & Login Logic
-
-| Role    | Login Identifier | Permissions |
-|---------|-----------------|-------------|
-| Admin   | email only      | All — create/edit users, timetables, fees |
-| Teacher | TCH001 or email | Roster, mark attendance, enter grades |
-| Student | STU003 or email | Own dashboard, attendance %, grades |
-
-Single portal detection logic:
-- starts with "STU" → query studentId
-- starts with "TCH" → query teacherId
-- contains "@" → query email
-- Role ALWAYS read from DB, never trusted from frontend
+- **Backend:** Node.js + Express (REST API, JSON only)
+- **Frontend:** React 19 + Vite + Tailwind CSS + shadcn/ui
+- **DB:** MySQL via Prisma ORM 5.x (pinned — do not upgrade to 7.x)
+- **Cache / OTP:** Redis via ioredis
+- **Auth:** JWT (15 min) + httpOnly refresh cookie (7 days) + Email OTP + hCaptcha
 
 ---
 
-## Seed Data
+## Login Identifiers
 
-| Name           | Role    | ID     | Dept | Notes |
-|----------------|---------|--------|------|-------|
-| admin@uni.com  | ADMIN   | —      | —    | Main admin |
-| Dr. Aman Kumar | TEACHER | TCH001 | CSE  | Active |
-| Harveen Kaur   | TEACHER | TCH002 | CSE  | mustResetPassword: true |
-| Aseem Kamra    | STUDENT | STU003 | CSE  | Active |
+| Role | Accepted identifier | Permissions |
+|---|---|---|
+| Admin | email only | Full system access |
+| Teacher | TCH001 or email | Attendance, grades, timetable for own courses |
+| Student | STU003 or email | Own attendance %, grades, timetable, self-enroll |
 
-All passwords bcrypt hashed, saltRounds: 12.
-
----
-
-## Database Schema — 7 MySQL Models (Prisma)
-
-| Model         | Purpose | Key constraints |
-|---------------|---------|----------------|
-| Department    | Dept list | code @unique |
-| User          | All roles in one table | email/studentId/teacherId @unique |
-| Course        | All courses | code @unique, type: MANDATORY/ELECTIVE |
-| Enrollment    | Student-Course junction — anchor table | @@unique([userId, courseId]) |
-| CourseTeacher | Teacher-Course junction | @@unique([courseId, userId]) |
-| Attendance    | Per-enrollment per-date | @@unique([enrollmentId, date]) |
-| Grade         | Per-enrollment per-component | @@unique([enrollmentId, component]) |
-
-Enums: Role (ADMIN/TEACHER/STUDENT), CourseType (MANDATORY/ELECTIVE), GradeComponent (INTERNAL/MID_TERM/FINAL)
-
-Key design decisions:
-- Enrollment is the anchor — Attendance/Grade hang off enrollmentId, not userId directly
-- Soft delete via isActive on User — never hard-delete users with academic records
-- mustResetPassword flag handles first-login forced reset
-- Prisma 5.x PINNED — Prisma 7 broke env() in schema.prisma, avoid until Phase 5
+Role is always read from the DB, never trusted from the frontend.
 
 ---
 
-## Auth Flow (Phase 2 — designed, not yet built)
+## Seed Users
 
-1. Submit identifier + password + CAPTCHA token
-2. Backend detects identifier type, queries correct field
-3. Verify CAPTCHA with hCaptcha API
-4. bcrypt.compare() checks password
-5. If mustResetPassword → redirect to reset, block token issue
+| Email / ID | Role | Password |
+|---|---|---|
+| pavitarmodgil001@gmail.com | ADMIN | admin123 |
+| aman.kumar@uni.com / TCH001 | TEACHER | teacher123 |
+| harveen.kaur@uni.com / TCH002 | TEACHER | teacher123 |
+| aseem.kamra@uni.com / STU003 | STUDENT | student123 |
+
+---
+
+## Database — 9 Models (Prisma + MySQL)
+
+**Core relationships:**
+```
+Department → User (many)
+Department → Course (many)
+User + Course → Enrollment (junction, anchor table)
+  Enrollment → Attendance (per date)
+  Enrollment → Grade (per component: INTERNAL / MID_TERM / FINAL)
+Course + User(teacher) → CourseTeacher (junction)
+Course + User(teacher) → TimetableEntry
+Announcement → User (author)
+```
+
+**Key design rules:**
+- Enrollment is the anchor — never attach Attendance/Grade directly to User
+- Soft delete via `isActive` flag — never hard-delete Users or Courses with academic records
+- `mustResetPassword` flag on User for first-login forced reset
+- `firstName` and `lastName` on User are nullable (`String?`) — users created before the migration have `null` and fall back to email-derived display names throughout the UI
+- `targetRole` on Announcement is a plain String (`ALL`/`ADMIN`/`TEACHER`/`STUDENT`), not the Role enum
+
+---
+
+## Auth Flow (implemented and working)
+
+1. Submit identifier + password + hCaptcha token
+2. Backend detects identifier type, queries correct DB field
+3. Verify hCaptcha with hCaptcha API
+4. `bcrypt.compare()` checks password
+5. If `mustResetPassword` → return `{ mustReset: true }`, no OTP issued
 6. Generate 6-digit OTP → Redis (5 min TTL) → email via Nodemailer
-7. User submits OTP → verify Redis → delete key
+7. User submits OTP → verify + delete from Redis (single-use)
 8. Issue JWT access token (15 min) + refresh token in httpOnly cookie (7 days)
-9. On expiry → client silently calls /auth/refresh
-
-Rate limits: login 5/15min/IP, OTP 3/hour
-
----
-
-## Key Rules
-
-- Never commit .env — maintain .env.example with placeholders
-- Never commit to main directly — Git Flow: main → dev → feat/branch
-- Passwords always bcrypt hashed, saltRounds 12
-- Helmet + CORS on every Express app
-- Schema before routes — migrations first, endpoints after
-- Role never trusted from frontend
+9. On expiry → Axios interceptor in `client/src/lib/api.js` silently calls `/auth/refresh`
 
 ---
 
 ## Phase Tracker
 
-- [x] Phase 0 — Foundation (Git, .env, bcrypt) DONE
-- [x] Phase 1 — Database Architecture DONE
-  - [x] schema.prisma — 7 models, 3 enums, 4 @@unique constraints
-  - [x] seed.js — 4 users + CSE dept, bcrypt hashed
-- [x] Phase 2 — Auth (JWT + OTP + Redis + CAPTCHA) DONE
-- [x] Phase 3 — Frontend (Vite + React + Tailwind) DONE
-- [x] Phase 4 — Features (partial)
-  - [x] Course Management — CRUD, assign teachers, enroll students, self-enroll
-  - [x] Attendance — teacher marks sessions, student views percentage
-  - [x] Grades — teacher entry per component, auto letter grade, student GPA report
-  - [ ] Timetable / Announcements
+- [x] Phase 0 — Foundation (Git Flow, .env, bcrypt)
+- [x] Phase 1 — Database Architecture (Prisma schema, 9 models, seed)
+- [x] Phase 2 — Authentication (JWT + OTP + Redis + hCaptcha + rate limiting)
+- [x] Phase 3 — Frontend (Vite + React 19 + Tailwind + shadcn/ui)
+- [x] Phase 4 — Features (all complete)
+  - [x] Course Management — CRUD, assign teachers, enroll, self-enroll
+  - [x] Attendance — teacher marks, student views %
+  - [x] Grades — per-component entry, auto letter grade, GPA report
+  - [x] Announcements — admin CRUD, role-targeted, dashboard widget
+  - [x] Timetable — CRUD API, admin table, teacher/student weekly grid
+  - [x] UX fixes — name fields (firstName/lastName), login OTP preview removed, dashboard duplicate stats removed, sidebar profile card clickable nav
 - [ ] Phase 5 — Deploy (Docker + GitHub Actions)
 
 ---
 
 ## Current State
 
-Last updated: Phase 4 — Grades complete (2026-03-26)
-Current branch: feat/phase4-course-management
-Next task: Open PR feat/phase4-course-management → dev, then dev → main (Phase 4 complete)
+**Last updated:** 2026-04-03
+**Current branch:** `feat/ux-fixes` (ready to PR → `dev`)
+**Next task:** Phase 6A — HOD/Dean roles + Department dashboard
 
 ### What's working end-to-end
-- Login: identifier (email / TCH001 / STU003) + password + hCaptcha + OTP → JWT
-- Admin: user CRUD, course CRUD, department list, all 4 dashboard stat cards live
-- Teacher: course list, assign self, mark attendance sessions, enter grades per component
-- Student: self-enroll, view attendance %, view grades + GPA
 
-### Grades feature (server)
-- `server/lib/gradeUtils.js` — letter grade + GPA logic (business rules isolated)
-- `server/controllers/gradeController.js` — 4 endpoints
-- `server/routes/grades.js` — `/api/grades`
-- Letter grade scale: O(≥80) A+(≥70) A(≥65) B+(≥61) B(≥50) C(≥40) P(≥35) F(<35)
-- GPA on 10-point scale, calculated from FINAL component only
-- Upsert pattern — re-saving never creates duplicates (@@unique[enrollmentId, component])
+- **Auth:** identifier (email / TCH001 / STU003) + password + hCaptcha + OTP → JWT + silent refresh
+- **Admin:** user CRUD (with optional firstName/lastName), course CRUD, department list, announcement CRUD, timetable CRUD, dashboard stats (single row) + recent activity; user table and student profile show real names with email fallback
+- **Teacher:** course list, mark attendance sessions, enter grades per component, view timetable, view announcements
+- **Student:** self-enroll, view attendance %, view grades + GPA, view timetable, view announcements
 
-### Grades feature (client)
-- `/teacher/grades` — TeacherGradesPage: course cards with progress bar + component status
-- `/teacher/grades/:courseId` — GradeEntryPage: tab switcher, bulk apply, per-row save
-- `/student/grades` — StudentGradesPage: GPA banner, pass/fail/pending per course
+### Key file locations
 
-### PR commands when ready
-```bash
-git push origin feat/phase4-course-management
-# Open PR: feat/phase4-course-management → dev
-# After merge: open PR dev → main (Phase 4 complete)
-```
+| Concern | File |
+|---|---|
+| All frontend routes | `client/src/App.jsx` |
+| Auth state (React) | `client/src/context/AuthContext.jsx` |
+| Axios + JWT refresh | `client/src/lib/api.js` |
+| JWT middleware | `server/middleware/authGuard.js` |
+| Grade scale logic | `server/lib/gradeUtils.js` |
+| Prisma singleton | `server/lib/prisma.js` |
+| Redis singleton | `server/lib/redis.js` |
+| Email / OTP sender | `server/lib/mailer.js` |
 
 ---
 
-## How to Start a New Claude Session
+## How to Start a New Session
 
-Paste this:
-"I'm working on my University Management System. Read my context.md before doing anything: [paste context.md] Current phase: X | Branch: Y | Task: Z"
+Paste this file and add:
+
+> "I'm working on my University Management System. Current phase: [X] | Branch: [Y] | Task: [Z]"

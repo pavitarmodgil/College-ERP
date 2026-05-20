@@ -4,6 +4,8 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
   const isEdit = !!user
   const [form, setForm] = useState({
     email: user?.email || '',
+    firstName: user?.firstName || '',
+    lastName: user?.lastName || '',
     password: '',
     role: user?.role || 'STUDENT',
     departmentId: user?.department?.id || '',
@@ -29,6 +31,8 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
     try {
       const payload = {
         email: form.email,
+        firstName: form.firstName || null,
+        lastName: form.lastName || null,
         role: form.role,
         departmentId: form.departmentId || null,
       }
@@ -85,6 +89,34 @@ export default function UserModal({ user, departments, onClose, onSubmit }) {
               placeholder="user@university.edu"
               className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface placeholder-on-surface-variant/50 outline-none"
             />
+          </div>
+
+          {/* First & Last Name */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
+                First Name
+              </label>
+              <input
+                name="firstName"
+                value={form.firstName}
+                onChange={handleChange}
+                placeholder="Aman"
+                className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface outline-none"
+              />
+            </div>
+            <div>
+              <label className="block text-xs font-semibold uppercase tracking-wider text-on-surface-variant mb-1.5 ml-1">
+                Last Name
+              </label>
+              <input
+                name="lastName"
+                value={form.lastName}
+                onChange={handleChange}
+                placeholder="Kumar"
+                className="w-full bg-surface-container-high border-0 rounded-lg py-3 px-4 focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all text-on-surface outline-none"
+              />
+            </div>
           </div>
 
           {/* Role & Department */}

@@ -52,7 +52,9 @@ export default function Sidebar() {
   const { user, logout } = useAuth()
   const navigate = useNavigate()
   const links = NAV_LINKS[user?.role] || []
-  const displayEmail = user?.email || ''
+  const displayName = user?.firstName
+    ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
+    : user?.email?.split('@')[0] || ''
   const roleLabel = ROLE_LABELS[user?.role] || user?.role || ''
 
   async function handleLogout() {
@@ -108,19 +110,27 @@ export default function Sidebar() {
       {/* Footer */}
       <div className="px-2 pb-6 space-y-1 pt-4">
         {/* User profile card — desktop only */}
-        <div className="hidden md:flex items-center gap-3 px-4 py-4 mb-2 bg-surface-container-low dark:bg-neutral-800 rounded-xl">
-          <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center flex-shrink-0">
-            <span className="material-symbols-outlined text-primary text-base">person</span>
+        <NavLink
+          to={user?.role === 'ADMIN' ? '/admin/profile' : user?.role === 'TEACHER' ? '/teacher' : '/student'}
+          className="block"
+        >
+          <div className="hidden md:flex items-center gap-3 px-4 py-4 mb-2 bg-surface-container-low dark:bg-neutral-800 rounded-xl hover:bg-surface-container-high dark:hover:bg-neutral-700 transition-colors cursor-pointer">
+            <div className="w-9 h-9 rounded-full bg-primary-fixed flex items-center justify-center flex-shrink-0">
+              <span className="material-symbols-outlined text-primary text-base">person</span>
+            </div>
+            <div className="overflow-hidden flex-1 min-w-0">
+              <p className="text-xs font-bold truncate text-on-surface dark:text-white">
+                {displayName}
+              </p>
+              <p className="text-[10px] truncate text-on-surface-variant dark:text-neutral-400">
+                {user?.email}
+              </p>
+              <span className="text-[10px] px-2 py-0.5 bg-primary-fixed text-on-primary-fixed-variant rounded-full">
+                {roleLabel}
+              </span>
+            </div>
           </div>
-          <div className="overflow-hidden flex-1 min-w-0">
-            <p className="text-xs font-bold truncate text-on-surface dark:text-white">
-              {displayEmail}
-            </p>
-            <span className="text-[10px] px-2 py-0.5 bg-primary-fixed text-on-primary-fixed-variant rounded-full">
-              {roleLabel}
-            </span>
-          </div>
-        </div>
+        </NavLink>
 
         <ThemeToggle />
 

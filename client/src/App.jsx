@@ -14,6 +14,7 @@ import DepartmentsPage from './pages/admin/DepartmentsPage'
 import StudentProfilePage from './pages/admin/StudentProfilePage'
 import AdminAnnouncementsPage from './pages/admin/AnnouncementsPage'
 import AdminTimetablePage from './pages/admin/TimetablePage'
+import AdminProfilePage from './pages/admin/AdminProfilePage'
 
 // Teacher pages
 import TeacherDashboard from './pages/TeacherDashboard'
@@ -49,6 +50,7 @@ export default function App() {
           <Route path="/admin/departments" element={<ProtectedRoute allowedRole="ADMIN"><DepartmentsPage /></ProtectedRoute>} />
           <Route path="/admin/announcements" element={<ProtectedRoute allowedRole="ADMIN"><AdminAnnouncementsPage /></ProtectedRoute>} />
           <Route path="/admin/timetable" element={<ProtectedRoute allowedRole="ADMIN"><AdminTimetablePage /></ProtectedRoute>} />
+          <Route path="/admin/profile" element={<ProtectedRoute allowedRole="ADMIN"><AdminProfilePage /></ProtectedRoute>} />
 
           {/* ── Teacher ── */}
           <Route path="/teacher" element={<ProtectedRoute allowedRole="TEACHER"><TeacherDashboard /></ProtectedRoute>} />
