@@ -7,12 +7,25 @@ import api from '../../lib/api'
 
 const LIMIT = 5
 
-// Derive display initials from email (e.g. "aman.kumar@uni.com" → "AK")
-function getInitials(email) {
-  const name = email.split('@')[0]
+function getInitials(user) {
+  if (user.firstName) {
+    const f = user.firstName[0].toUpperCase()
+    const l = user.lastName?.[0]?.toUpperCase() || ''
+    return f + l
+  }
+  const name = user.email.split('@')[0]
   const parts = name.split(/[._-]/)
   if (parts.length >= 2) return (parts[0][0] + parts[1][0]).toUpperCase()
   return name.slice(0, 2).toUpperCase()
+}
+
+function getDisplayName(user) {
+  if (user.firstName) {
+    return `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
+  }
+  return user.email.split('@')[0]
+    .replace(/[._-]/g, ' ')
+    .replace(/\b\w/g, c => c.toUpperCase())
 }
 
 const ROLE_STYLES = {
@@ -247,12 +260,12 @@ export default function UsersPage() {
                           <td className="px-8 py-5">
                             <div className="flex items-center gap-4">
                               <div className={`w-11 h-11 rounded-xl ${avatarColor} flex items-center justify-center font-bold text-sm`}>
-                                {getInitials(u.email)}
+                                {getInitials(u)}
                               </div>
                               <div>
                                 <div className="flex items-center gap-2">
                                   <p className="font-bold text-on-surface leading-tight capitalize">
-                                    {u.email.split('@')[0].replace(/[._-]/g, ' ')}
+                                    {getDisplayName(u)}
                                   </p>
                                   {u.role === 'STUDENT' && (
                                     <span className="material-symbols-outlined text-sm text-slate-300 group-hover:text-primary transition-colors">

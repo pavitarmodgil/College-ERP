@@ -4,22 +4,29 @@ import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 import AnnouncementsWidget from '../components/AnnouncementsWidget'
 
+const STATUS_STYLES = {
+  Completed:  { dot: 'bg-emerald-500', text: 'text-emerald-600', bg: 'bg-emerald-50' },
+  Processing: { dot: 'bg-indigo-500',  text: 'text-indigo-600',  bg: 'bg-indigo-50'  },
+  Pending:    { dot: 'bg-amber-500',   text: 'text-amber-600',   bg: 'bg-amber-50'   },
+}
+
 export default function AdminDashboard() {
   const { user } = useAuth()
-  const displayName = user?.email?.split('@')[0] || 'Admin'
+  const displayName = user?.firstName
+    ? `${user.firstName}${user.lastName ? ' ' + user.lastName : ''}`
+    : user?.email?.split('@')[0] || 'Admin'
   const today = new Date().toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })
 
   const [studentCount, setStudentCount] = useState(null)
   const [teacherCount, setTeacherCount] = useState(null)
   const [courseCount, setCourseCount] = useState(null)
   const [deptCount, setDeptCount] = useState(null)
-  const [enrollmentCount, setEnrollmentCount] = useState(null)
-  const [attendanceRate] = useState(82)
+  const [activity, setActivity] = useState(null)  // null = loading
 
   useEffect(() => {
     api.get('/users', { params: { role: 'STUDENT', limit: 1 } })
-      .then(({ data }) => { setStudentCount(data.total); setEnrollmentCount(data.total) })
-      .catch(() => { setStudentCount('—'); setEnrollmentCount('—') })
+      .then(({ data }) => setStudentCount(data.total))
+      .catch(() => setStudentCount('—'))
     api.get('/users', { params: { role: 'TEACHER', limit: 1 } })
       .then(({ data }) => setTeacherCount(data.total))
       .catch(() => setTeacherCount('—'))
@@ -29,6 +36,9 @@ export default function AdminDashboard() {
     api.get('/users/departments')
       .then(({ data }) => setDeptCount(data.length))
       .catch(() => setDeptCount('—'))
+    api.get('/users/recent-activity')
+      .then(({ data }) => setActivity(data))
+      .catch(() => setActivity([]))
   }, [])
 
   return (
@@ -128,85 +138,80 @@ export default function AdminDashboard() {
             </div>
           </div>
 
-          {/* Second Stats Row */}
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-12">
-
-            {/* Total Enrollments */}
-            <div className="bg-surface-container-lowest rounded-xl p-6 transition-all duration-300 hover:-translate-y-1">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-2xl bg-emerald-50 text-emerald-600">
-                  <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>how_to_reg</span>
-                </div>
-                <span className="text-emerald-600 text-xs font-bold bg-emerald-50 px-2 py-1 rounded-full">Live</span>
-              </div>
-              <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Total Enrolled</p>
-              <h3 className="text-3xl font-bold font-headline">{enrollmentCount ?? '…'}</h3>
-              <p className="text-xs text-slate-400 mt-1">students across all depts</p>
-            </div>
-
-            {/* Attendance Rate */}
-            <div className="bg-surface-container-lowest rounded-xl p-6 transition-all duration-300 hover:-translate-y-1">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-2xl bg-indigo-50 text-primary">
-                  <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>event_available</span>
-                </div>
-                <span className="text-primary text-xs font-bold bg-indigo-50 px-2 py-1 rounded-full">Avg</span>
-              </div>
-              <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Attendance Rate</p>
-              <h3 className="text-3xl font-bold font-headline">{attendanceRate}%</h3>
-              <p className="text-xs text-slate-400 mt-1">across all courses</p>
-            </div>
-
-            {/* Active Courses */}
-            <div className="bg-surface-container-lowest rounded-xl p-6 transition-all duration-300 hover:-translate-y-1">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-2xl bg-amber-50 text-amber-700">
-                  <span className="material-symbols-outlined text-2xl" style={{ fontVariationSettings: "'FILL' 1" }}>menu_book</span>
-                </div>
-                <span className="text-amber-700 text-xs font-bold bg-amber-50 px-2 py-1 rounded-full">Semester</span>
-              </div>
-              <p className="text-slate-500 text-xs font-bold mb-1 uppercase tracking-wider">Active Courses</p>
-              <h3 className="text-3xl font-bold font-headline">{courseCount ?? '…'}</h3>
-              <p className="text-xs text-slate-400 mt-1">across {deptCount ?? '…'} departments</p>
-            </div>
-
-            {/* Quick Actions */}
-            <div className="bg-primary-container rounded-xl p-6 text-on-primary transition-all duration-300 hover:-translate-y-1">
-              <div className="flex justify-between items-start mb-4">
-                <div className="p-3 rounded-2xl bg-white/20 text-white">
-                  <span className="material-symbols-outlined text-2xl">bolt</span>
-                </div>
-              </div>
-              <p className="text-white/70 text-xs font-bold mb-1 uppercase tracking-wider">Quick Actions</p>
-              <div className="space-y-2 mt-3">
-                <a href="/admin/users" className="block text-sm font-semibold text-white hover:text-white/80 transition-colors">→ Manage Users</a>
-                <a href="/admin/courses" className="block text-sm font-semibold text-white hover:text-white/80 transition-colors">→ Manage Courses</a>
-                <a href="/admin/announcements" className="block text-sm font-semibold text-white hover:text-white/80 transition-colors">→ Post Announcement</a>
-              </div>
-            </div>
-          </div>
-
-          {/* Bottom: University at a Glance + Announcements */}
+          {/* Bottom: Recent Enrollment Activity + Announcements */}
           <div className="grid grid-cols-1 xl:grid-cols-3 gap-8">
+            {/* Recent Enrollment Activity */}
             <div className="xl:col-span-2 bg-surface-container-low rounded-xl p-8">
-              <h3 className="text-xl font-bold font-headline mb-6">University at a Glance</h3>
-              <div className="grid grid-cols-3 gap-6">
-                {[
-                  { label: 'Students', value: studentCount, icon: 'person', color: 'text-primary bg-primary-fixed' },
-                  { label: 'Teachers', value: teacherCount, icon: 'school', color: 'text-secondary bg-secondary-fixed' },
-                  { label: 'Departments', value: deptCount, icon: 'account_tree', color: 'text-tertiary bg-tertiary-fixed' },
-                ].map(({ label, value, icon, color }) => (
-                  <div key={label} className="text-center">
-                    <div className={`w-14 h-14 rounded-2xl ${color} flex items-center justify-center mx-auto mb-3`}>
-                      <span className="material-symbols-outlined text-xl" style={{ fontVariationSettings: "'FILL' 1" }}>{icon}</span>
-                    </div>
-                    <p className="text-3xl font-bold font-headline">{value ?? '…'}</p>
-                    <p className="text-sm text-slate-500 font-medium">{label}</p>
-                  </div>
-                ))}
+              <div className="flex items-center justify-between mb-8">
+                <div>
+                  <h3 className="text-2xl font-extrabold font-headline text-on-surface tracking-tight">
+                    Recent Enrollment Activity
+                  </h3>
+                  <p className="text-sm text-on-surface-variant font-medium mt-1">
+                    Real-time update of student registrations
+                  </p>
+                </div>
+                <a href="/admin/users" className="text-primary font-bold text-sm hover:underline">
+                  View All Records
+                </a>
+              </div>
+
+              {/* Column headers */}
+              <div className="flex items-center px-4 py-2 text-[10px] font-black text-slate-400 uppercase tracking-widest mb-2">
+                <div className="flex-1">Student</div>
+                <div className="w-32 hidden sm:block">Department</div>
+                <div className="w-28">Course</div>
+                <div className="w-28">Status</div>
+                <div className="w-20 text-right">Date</div>
+              </div>
+
+              {/* Rows */}
+              <div className="space-y-3">
+                {activity === null ? (
+                  // Loading skeletons
+                  Array.from({ length: 4 }).map((_, i) => (
+                    <div key={i} className="animate-pulse bg-surface-container-high rounded-xl h-14" />
+                  ))
+                ) : activity.length === 0 ? (
+                  <p className="text-center text-on-surface-variant py-10 text-sm">No recent activity yet</p>
+                ) : (
+                  activity.map((row, i) => {
+                    const style = STATUS_STYLES[row.status] || STATUS_STYLES.Pending
+                    return (
+                      <div
+                        key={i}
+                        className="flex items-center px-4 py-4 bg-surface-container-lowest rounded-xl transition-all hover:scale-[1.01] hover:shadow-sm"
+                      >
+                        {/* Student */}
+                        <div className="flex-1 flex items-center gap-3 min-w-0">
+                          <div className="w-8 h-8 rounded-full bg-primary-fixed text-primary flex items-center justify-center text-xs font-bold flex-shrink-0">
+                            {row.initials}
+                          </div>
+                          <span className="text-sm font-bold text-on-surface truncate">{row.name}</span>
+                        </div>
+                        {/* Department */}
+                        <div className="w-32 text-xs font-medium text-slate-500 hidden sm:block truncate">{row.dept}</div>
+                        {/* Course chip */}
+                        <div className="w-28">
+                          <span className="px-2 py-1 bg-secondary-fixed text-on-secondary-fixed-variant text-[10px] font-bold rounded-full">
+                            {row.course}
+                          </span>
+                        </div>
+                        {/* Status */}
+                        <div className="w-28 flex items-center gap-1.5">
+                          <span className={`w-2 h-2 rounded-full flex-shrink-0 ${style.dot}`} />
+                          <span className={`text-[10px] font-black uppercase ${style.text}`}>{row.status}</span>
+                        </div>
+                        {/* Date */}
+                        <div className="w-20 text-right text-xs font-medium text-slate-400">{row.date}</div>
+                      </div>
+                    )
+                  })
+                )}
               </div>
             </div>
 
+            {/* Latest Announcements */}
             <div className="bg-surface-container-lowest rounded-xl p-6 shadow-sm">
               <div className="flex items-center justify-between mb-4">
                 <h3 className="font-bold font-headline text-lg">Latest Announcements</h3>

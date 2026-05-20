@@ -311,29 +311,6 @@ export default function LoginPage() {
               </form>
             )}
 
-            {/* OTP preview (step 1 greyed out) */}
-            {step === 'credentials' && (
-              <div className="mt-10 pt-8 border-t border-outline-variant/15">
-                <div className="flex items-center gap-3 text-outline mb-4">
-                  <span className="material-symbols-outlined text-lg">phonelink_lock</span>
-                  <span className="text-xs font-bold font-label tracking-widest uppercase">
-                    Secondary Verification
-                  </span>
-                </div>
-                <div className="opacity-40 pointer-events-none">
-                  <div className="flex gap-3 mb-4">
-                    {Array(6).fill(0).map((_, i) => (
-                      <div key={i} className="w-full h-12 bg-surface-container-high rounded-lg flex items-center justify-center text-outline-variant font-bold">
-                        _
-                      </div>
-                    ))}
-                  </div>
-                  <p className="text-xs text-on-surface-variant text-center">
-                    OTP step will appear after initial sign-in
-                  </p>
-                </div>
-              </div>
-            )}
           </div>
 
           <footer className="mt-8 text-center">
