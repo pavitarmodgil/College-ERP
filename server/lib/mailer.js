@@ -1,20 +1,12 @@
-const nodemailer = require('nodemailer')
+const { Resend } = require('resend')
 
-const transporter = nodemailer.createTransport({
-  service: 'gmail',
-  auth: {
-    user: process.env.GMAIL_USER,
-    pass: process.env.GMAIL_APP_PASSWORD,
-  },
-})
+const resend = new Resend(process.env.RESEND_API_KEY)
 
 async function sendOTPEmail(toEmail, message) {
-  // If message is a 6-digit number string, format as OTP
-  // Otherwise send as plain text body
   const isOTP = /^\d{6}$/.test(message)
 
-  await transporter.sendMail({
-    from: `"College ERP" <${process.env.GMAIL_USER}>`,
+  await resend.emails.send({
+    from: 'College ERP <onboarding@resend.dev>',
     to: toEmail,
     subject: isOTP ? 'Your login verification code' : 'Password Reset — College ERP',
     html: isOTP
