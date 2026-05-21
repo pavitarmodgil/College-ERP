@@ -14,6 +14,9 @@ const errorHandler = require('./middleware/errorHandler')
 
 const app = express()
 
+// Trust Railway/Render/Vercel reverse proxy — required for rate-limiter IP detection
+app.set('trust proxy', 1)
+
 // Security middleware — always first
 app.use(helmet())
 app.use(cors({
