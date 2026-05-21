@@ -94,6 +94,7 @@ export default function TeacherAttendancePage() {
                   key={course.id}
                   course={course}
                   onMark={() => navigate(`/teacher/attendance/${course.id}`)}
+                  onHistory={() => navigate(`/teacher/attendance/${course.id}/history`)}
                 />
               ))}
             </section>
@@ -104,7 +105,7 @@ export default function TeacherAttendancePage() {
   )
 }
 
-function CourseCard({ course, onMark }) {
+function CourseCard({ course, onMark, onHistory }) {
   const submitted = course.todaySubmitted
 
   return (
@@ -142,7 +143,7 @@ function CourseCard({ course, onMark }) {
         </div>
       </div>
 
-      <div className="space-y-6 pt-6 border-t border-outline-variant/10">
+      <div className="space-y-4 pt-6 border-t border-outline-variant/10">
         <div className="flex justify-between items-center text-sm">
           <span className="text-on-surface-variant">Course type: {course.type}</span>
         </div>
@@ -163,6 +164,13 @@ function CourseCard({ course, onMark }) {
             Mark Attendance
           </button>
         )}
+        <button
+          onClick={onHistory}
+          className="w-full bg-surface-container-low text-slate-600 py-3 rounded-xl font-semibold tracking-wide hover:bg-surface-container-high transition-colors flex items-center justify-center gap-2 text-sm"
+        >
+          <span className="material-symbols-outlined text-base">history</span>
+          View Past Sessions
+        </button>
       </div>
     </div>
   )

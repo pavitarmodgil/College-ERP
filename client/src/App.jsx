@@ -20,6 +20,7 @@ import AdminProfilePage from './pages/admin/AdminProfilePage'
 import TeacherDashboard from './pages/TeacherDashboard'
 import TeacherAttendancePage from './pages/teacher/TeacherAttendancePage'
 import AttendanceSessionPage from './pages/teacher/AttendanceSessionPage'
+import AttendanceHistoryPage from './pages/teacher/AttendanceHistoryPage'
 import TeacherGradesPage from './pages/teacher/TeacherGradesPage'
 import GradeEntryPage from './pages/teacher/GradeEntryPage'
 import TeacherTimetablePage from './pages/teacher/TeacherTimetablePage'
@@ -56,6 +57,7 @@ export default function App() {
           <Route path="/teacher" element={<ProtectedRoute allowedRole="TEACHER"><TeacherDashboard /></ProtectedRoute>} />
           <Route path="/teacher/attendance" element={<ProtectedRoute allowedRole="TEACHER"><TeacherAttendancePage /></ProtectedRoute>} />
           <Route path="/teacher/attendance/:courseId" element={<ProtectedRoute allowedRole="TEACHER"><AttendanceSessionPage /></ProtectedRoute>} />
+          <Route path="/teacher/attendance/:courseId/history" element={<ProtectedRoute allowedRole="TEACHER"><AttendanceHistoryPage /></ProtectedRoute>} />
           <Route path="/teacher/grades" element={<ProtectedRoute allowedRole="TEACHER"><TeacherGradesPage /></ProtectedRoute>} />
           <Route path="/teacher/grades/:courseId" element={<ProtectedRoute allowedRole="TEACHER"><GradeEntryPage /></ProtectedRoute>} />
           <Route path="/teacher/announcements" element={<ProtectedRoute allowedRole="TEACHER"><AnnouncementsPage /></ProtectedRoute>} />

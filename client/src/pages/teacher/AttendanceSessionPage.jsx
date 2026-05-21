@@ -1,8 +1,7 @@
 import { useState, useEffect } from 'react'
-import { useParams, useNavigate } from 'react-router-dom'
+import { useParams, useNavigate, useSearchParams } from 'react-router-dom'
 import api from '../../lib/api'
 
-// Avatar background colours cycled by index for visual variety
 const AVATAR_COLORS = [
   'bg-indigo-100 text-indigo-700',
   'bg-purple-100 text-purple-700',
@@ -11,9 +10,18 @@ const AVATAR_COLORS = [
   'bg-emerald-100 text-emerald-700',
 ]
 
+function todayStr() {
+  const now = new Date()
+  return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
+}
+
 export default function AttendanceSessionPage() {
   const { courseId } = useParams()
   const navigate = useNavigate()
+  const [searchParams, setSearchParams] = useSearchParams()
+
+  const dateParam = searchParams.get('date') || todayStr()
+  const isToday = dateParam === todayStr()
 
   const [session, setSession] = useState(null)
   const [students, setStudents] = useState([])
@@ -21,20 +29,27 @@ export default function AttendanceSessionPage() {
   const [isSaving, setIsSaving] = useState(false)
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [success, setSuccess] = useState('')
 
-  const today = new Date().toLocaleDateString('en-US', {
+  const displayDate = new Date(dateParam + 'T00:00:00').toLocaleDateString('en-US', {
     weekday: 'short', day: 'numeric', month: 'short', year: 'numeric',
   })
 
   useEffect(() => {
-    api.get(`/attendance/${courseId}/session`)
+    setIsLoading(true)
+    setError('')
+    setSuccess('')
+    const url = isToday
+      ? `/attendance/${courseId}/session`
+      : `/attendance/${courseId}/session?date=${dateParam}`
+    api.get(url)
       .then(({ data }) => {
         setSession(data)
         setStudents(data.students)
       })
       .catch((err) => setError(err.response?.data?.error || 'Failed to load session'))
       .finally(() => setIsLoading(false))
-  }, [courseId])
+  }, [courseId, dateParam])
 
   function handleToggle(enrollmentId) {
     setStudents((prev) =>
@@ -46,16 +61,29 @@ export default function AttendanceSessionPage() {
     setStudents((prev) => prev.map((s) => ({ ...s, present })))
   }
 
+  function handleDateChange(newDate) {
+    setSearchParams(newDate === todayStr() ? {} : { date: newDate })
+  }
+
   async function handleSave() {
     setIsSaving(true)
     setError('')
+    setSuccess('')
     try {
-      await api.post(`/attendance/${courseId}/session`, {
+      const body = {
         students: students.map(({ enrollmentId, present }) => ({ enrollmentId, present })),
-      })
-      navigate('/teacher/attendance')
+      }
+      if (!isToday) body.date = dateParam
+      await api.post(`/attendance/${courseId}/session`, body)
+      if (isToday) {
+        navigate('/teacher/attendance')
+      } else {
+        setSuccess('Attendance saved successfully')
+        setStudents((prev) => prev.map((s) => ({ ...s, alreadySaved: true })))
+      }
     } catch (err) {
       setError(err.response?.data?.error || 'Failed to save attendance')
+    } finally {
       setIsSaving(false)
     }
   }
@@ -100,13 +128,30 @@ export default function AttendanceSessionPage() {
               {session?.courseId ? `Course #${session.courseId}` : 'Attendance Session'}
             </h1>
             <p className="text-sm font-medium text-slate-500 mt-0.5 uppercase tracking-wider">
-              Today — {today}
+              {isToday ? 'Today' : 'Past Session'} — {displayDate}
             </p>
           </div>
         </div>
 
         <div className="flex items-center gap-3">
-          <div className="hidden md:flex bg-surface-container-low px-4 py-2 rounded-full items-center gap-2">
+          <div className="flex items-center gap-2 bg-surface-container-low px-3 py-2 rounded-xl">
+            <span className="material-symbols-outlined text-slate-400 text-base">calendar_today</span>
+            <input
+              type="date"
+              value={dateParam}
+              max={todayStr()}
+              onChange={(e) => handleDateChange(e.target.value)}
+              className="bg-transparent border-none focus:ring-0 text-sm font-medium outline-none cursor-pointer"
+            />
+          </div>
+          <button
+            onClick={() => navigate(`/teacher/attendance/${courseId}/history`)}
+            className="hidden md:flex items-center gap-1.5 px-4 py-2 bg-surface-container-low rounded-xl text-sm font-semibold text-slate-600 hover:bg-surface-container-high transition-colors"
+          >
+            <span className="material-symbols-outlined text-base">history</span>
+            History
+          </button>
+          <div className="hidden md:flex bg-surface-container-low px-4 py-2 rounded-xl items-center gap-2">
             <span className="material-symbols-outlined text-slate-400 text-base">search</span>
             <input
               className="bg-transparent border-none focus:ring-0 text-sm w-44 font-medium outline-none"
@@ -116,17 +161,27 @@ export default function AttendanceSessionPage() {
               type="text"
             />
           </div>
-          <button className="p-2 text-on-surface-variant hover:bg-indigo-50 rounded-full transition-all">
-            <span className="material-symbols-outlined">notifications</span>
-          </button>
         </div>
       </header>
 
       <main className="pt-24 pb-36 px-6 md:px-10 max-w-5xl mx-auto">
-        {/* Error */}
         {error && (
           <div className="mb-6 p-4 bg-error-container/50 rounded-2xl text-on-error-container text-sm font-medium">
             {error}
+          </div>
+        )}
+
+        {success && (
+          <div className="mb-6 p-4 bg-green-50 rounded-2xl text-green-700 text-sm font-medium flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg" style={{ fontVariationSettings: "'FILL' 1" }}>check_circle</span>
+            {success}
+          </div>
+        )}
+
+        {!isToday && (
+          <div className="mb-6 p-4 bg-amber-50 rounded-2xl text-amber-700 text-sm font-medium flex items-center gap-2">
+            <span className="material-symbols-outlined text-lg">edit_calendar</span>
+            Editing past session — {displayDate}. Changes will be saved via upsert.
           </div>
         )}
 
@@ -259,7 +314,7 @@ export default function AttendanceSessionPage() {
             className="flex-grow md:flex-none bg-primary text-on-primary px-10 py-4 rounded-full font-bold shadow-lg shadow-indigo-200 hover:scale-105 active:scale-95 transition-all flex items-center justify-center gap-3 disabled:opacity-60 disabled:scale-100"
           >
             <span className="material-symbols-outlined text-xl">save</span>
-            {isSaving ? 'Saving…' : 'Save Attendance'}
+            {isSaving ? 'Saving…' : isToday ? 'Save Attendance' : 'Update Attendance'}
           </button>
         </div>
       </footer>

@@ -6,6 +6,7 @@ const {
   saveSession,
   getSessionHistory,
   getMyAttendance,
+  updateSingleAttendance,
 } = require('../controllers/attendanceController')
 const { authGuard, requireRole } = require('../middleware/authGuard')
 
@@ -19,5 +20,6 @@ router.get('/courses', requireRole('TEACHER'), getTeacherCourses)
 router.get('/:courseId/session', requireRole('TEACHER'), getOrCreateSession)
 router.post('/:courseId/session', requireRole('TEACHER'), saveSession)
 router.get('/:courseId/history', requireRole('TEACHER'), getSessionHistory)
+router.patch('/:enrollmentId', requireRole('TEACHER'), updateSingleAttendance)
 
 module.exports = router

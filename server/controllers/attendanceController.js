@@ -1,14 +1,19 @@
 const prisma = require('../lib/prisma')
 
-// Helper: get today's date as midnight UTC (DATE only, no time)
-// WHY: Prisma normalises @db.Date values to midnight UTC when reading
-// back from the database. setHours(0,0,0,0) uses the server's LOCAL timezone,
-// producing e.g. 18:30:00Z on UTC+5:30 — which never matches the stored
-// 00:00:00Z. Date.UTC() builds the midnight UTC timestamp directly from
-// the current UTC calendar date, so writes and reads always agree.
 function todayDate() {
   const now = new Date()
   return new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()))
+}
+
+// Returns midnight-UTC Date for a "YYYY-MM-DD" string, or null if invalid
+function parseAndValidateDate(dateStr) {
+  if (!dateStr || typeof dateStr !== 'string') return null
+  const match = dateStr.match(/^(\d{4})-(\d{2})-(\d{2})$/)
+  if (!match) return null
+  const [, y, m, d] = match.map(Number)
+  const date = new Date(Date.UTC(y, m - 1, d))
+  if (date.getUTCFullYear() !== y || date.getUTCMonth() !== m - 1 || date.getUTCDate() !== d) return null
+  return date
 }
 
 // GET /api/attendance/courses
@@ -64,16 +69,22 @@ async function getTeacherCourses(req, res, next) {
   }
 }
 
-// GET /api/attendance/:courseId/session
-// Returns today's session — auto-creates records if none exist yet
-// Each enrolled student gets a record defaulting to present: false
 async function getOrCreateSession(req, res, next) {
   try {
     const courseId = parseInt(req.params.courseId)
     const teacherId = req.user.id
-    const today = todayDate()
 
-    // Verify teacher is assigned to this course
+    let sessionDate = todayDate()
+    if (req.query.date) {
+      sessionDate = parseAndValidateDate(req.query.date)
+      if (!sessionDate) {
+        return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' })
+      }
+      if (sessionDate > todayDate()) {
+        return res.status(400).json({ error: 'Cannot view future attendance sessions' })
+      }
+    }
+
     const assignment = await prisma.courseTeacher.findUnique({
       where: { courseId_userId: { courseId, userId: teacherId } },
     })
@@ -81,7 +92,6 @@ async function getOrCreateSession(req, res, next) {
       return res.status(403).json({ error: 'You are not assigned to this course' })
     }
 
-    // Get all enrollments for this course
     const enrollments = await prisma.enrollment.findMany({
       where: { courseId },
       include: {
@@ -92,18 +102,16 @@ async function getOrCreateSession(req, res, next) {
           },
         },
         attendance: {
-          where: { date: today },
+          where: { date: sessionDate },
           take: 1,
         },
       },
     })
 
     if (enrollments.length === 0) {
-      return res.json({ courseId, date: today, students: [], totalStudents: 0, presentCount: 0 })
+      return res.json({ courseId, date: sessionDate, students: [], totalStudents: 0, presentCount: 0 })
     }
 
-    // WHY we don't auto-write on GET:
-    // Writing on GET violates REST. We only write when teacher saves.
     const students = enrollments.map((enrollment) => ({
       enrollmentId: enrollment.id,
       userId: enrollment.user.id,
@@ -115,7 +123,7 @@ async function getOrCreateSession(req, res, next) {
 
     res.json({
       courseId,
-      date: today,
+      date: sessionDate,
       students,
       totalStudents: students.length,
       presentCount: students.filter((s) => s.present).length,
@@ -125,21 +133,27 @@ async function getOrCreateSession(req, res, next) {
   }
 }
 
-// POST /api/attendance/:courseId/session
-// Saves the full session — upserts each student's record
 async function saveSession(req, res, next) {
   try {
     const courseId = parseInt(req.params.courseId)
     const teacherId = req.user.id
-    const today = todayDate()
-    const { students } = req.body
+    const { students, date: dateParam } = req.body
 
-    // students: [{ enrollmentId, present }]
+    let sessionDate = todayDate()
+    if (dateParam) {
+      sessionDate = parseAndValidateDate(dateParam)
+      if (!sessionDate) {
+        return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' })
+      }
+      if (sessionDate > todayDate()) {
+        return res.status(400).json({ error: 'Cannot save attendance for future dates' })
+      }
+    }
+
     if (!Array.isArray(students) || students.length === 0) {
       return res.status(400).json({ error: 'students array is required' })
     }
 
-    // Verify teacher assignment
     const assignment = await prisma.courseTeacher.findUnique({
       where: { courseId_userId: { courseId, userId: teacherId } },
     })
@@ -147,22 +161,17 @@ async function saveSession(req, res, next) {
       return res.status(403).json({ error: 'You are not assigned to this course' })
     }
 
-    // WHY upsert with @@unique([enrollmentId, date]):
-    // Teacher might save, then reopen and change a mark.
-    // Upsert = insert if not exists, update if exists.
-    // The unique constraint from Phase 1 schema design is the key —
-    // it guarantees we never get duplicate attendance rows.
     const upserts = students.map(({ enrollmentId, present }) =>
       prisma.attendance.upsert({
         where: {
           enrollmentId_date: {
             enrollmentId: parseInt(enrollmentId),
-            date: today,
+            date: sessionDate,
           },
         },
         create: {
           enrollmentId: parseInt(enrollmentId),
-          date: today,
+          date: sessionDate,
           present: Boolean(present),
         },
         update: {
@@ -171,15 +180,12 @@ async function saveSession(req, res, next) {
       })
     )
 
-    // WHY Promise.all: all upserts are independent — no reason to
-    // run them sequentially. Parallel = faster, especially for
-    // large classes (60+ students).
     await Promise.all(upserts)
 
     const presentCount = students.filter((s) => s.present).length
     res.json({
       message: 'Attendance saved',
-      date: today,
+      date: sessionDate,
       totalStudents: students.length,
       presentCount,
       absentCount: students.length - presentCount,
@@ -296,10 +302,97 @@ async function getMyAttendance(req, res, next) {
   }
 }
 
+async function updateSingleAttendance(req, res, next) {
+  try {
+    const enrollmentId = parseInt(req.params.enrollmentId)
+    const teacherId = req.user.id
+    const { date, present } = req.body
+
+    if (!date || present === undefined) {
+      return res.status(400).json({
+        error: 'date and present are required. Example: { "date": "2026-02-10", "present": true }',
+      })
+    }
+
+    const attendanceDate = parseAndValidateDate(date)
+    if (!attendanceDate) {
+      return res.status(400).json({ error: 'Invalid date format. Use YYYY-MM-DD.' })
+    }
+
+    if (attendanceDate > todayDate()) {
+      return res.status(400).json({ error: 'Cannot edit future attendance' })
+    }
+
+    const enrollment = await prisma.enrollment.findUnique({
+      where: { id: enrollmentId },
+      include: {
+        course: {
+          include: {
+            teachers: {
+              where: { userId: teacherId },
+              select: { id: true },
+            },
+          },
+        },
+      },
+    })
+
+    if (!enrollment) {
+      return res.status(404).json({ error: 'Enrollment not found' })
+    }
+
+    if (enrollment.course.teachers.length === 0) {
+      return res.status(403).json({
+        error: 'You are not assigned to this course. Cannot edit attendance.',
+      })
+    }
+
+    const updated = await prisma.attendance.upsert({
+      where: {
+        enrollmentId_date: {
+          enrollmentId,
+          date: attendanceDate,
+        },
+      },
+      create: {
+        enrollmentId,
+        date: attendanceDate,
+        present: Boolean(present),
+      },
+      update: {
+        present: Boolean(present),
+      },
+      include: {
+        enrollment: {
+          include: {
+            user: { select: { email: true, studentId: true } },
+            course: { select: { name: true, code: true } },
+          },
+        },
+      },
+    })
+
+    res.json({
+      message: 'Attendance updated',
+      attendanceRecord: {
+        id: updated.id,
+        enrollmentId: updated.enrollmentId,
+        student: `${updated.enrollment.user.studentId} (${updated.enrollment.user.email})`,
+        course: `${updated.enrollment.course.code} — ${updated.enrollment.course.name}`,
+        date: updated.date,
+        present: updated.present,
+      },
+    })
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getTeacherCourses,
   getOrCreateSession,
   saveSession,
   getSessionHistory,
   getMyAttendance,
+  updateSingleAttendance,
 }

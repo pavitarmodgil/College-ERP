@@ -32,12 +32,15 @@ Role is always read from the DB, never trusted from the frontend.
 
 ## Seed Users
 
-| Email / ID | Role | Password |
-|---|---|---|
-| pavitarmodgil001@gmail.com | ADMIN | admin123 |
-| aman.kumar@uni.com / TCH001 | TEACHER | teacher123 |
-| harveen.kaur@uni.com / TCH002 | TEACHER | teacher123 |
-| aseem.kamra@uni.com / STU003 | STUDENT | student123 |
+All passwords: admin → `admin123` · teacher → `teacher123` · student → `student123`
+
+**Admins:** pavitarmodgil001@gmail.com · admin.secondary@uni.com
+
+**Teachers:** aman.kumar@uni.com (TCH001) · rajesh.singh@uni.com (TCH002) · priya.sharma@uni.com (TCH003) · harveen.kaur@uni.com (TCH004, mustReset) · vikram.patel@uni.com (TCH005) · anjali.gupta@uni.com (TCH006) · neha.mishra@uni.com (TCH007)
+
+**Students:** aseemkamra22@gmail.com (STU001) · rohan.sharma@uni.com (STU002) · aseem.kamra@uni.com (STU003, legacy) · kavya.nair@uni.com (STU004) · aditya.verma@uni.com (STU005) · disha.mehta@uni.com (STU006) · arjun.mishra@uni.com (STU007) · zara.khan@uni.com (STU008) · tanvi.singh@uni.com (STU009) · priya.jain@uni.com (STU010)
+
+**Departments:** CSE · ECE · ME — **Courses:** CSE210 · CSE320 · CSE340 · CSE410 · CSE420 · ECE210 · ECE320 · ECE410 · ME210
 
 ---
 
@@ -69,9 +72,9 @@ Announcement → User (author)
 1. Submit identifier + password + hCaptcha token
 2. Backend detects identifier type, queries correct DB field
 3. Verify hCaptcha with hCaptcha API
-4. `bcrypt.compare()` checks password
+4. `bcryptjs.compare()` checks password
 5. If `mustResetPassword` → return `{ mustReset: true }`, no OTP issued
-6. Generate 6-digit OTP → Redis (5 min TTL) → email via Nodemailer
+6. Generate 6-digit OTP → Redis (5 min TTL) → email via Resend HTTP API
 7. User submits OTP → verify + delete from Redis (single-use)
 8. Issue JWT access token (15 min) + refresh token in httpOnly cookie (7 days)
 9. On expiry → Axios interceptor in `client/src/lib/api.js` silently calls `/auth/refresh`
@@ -91,21 +94,28 @@ Announcement → User (author)
   - [x] Announcements — admin CRUD, role-targeted, dashboard widget
   - [x] Timetable — CRUD API, admin table, teacher/student weekly grid
   - [x] UX fixes — name fields (firstName/lastName), login OTP preview removed, dashboard duplicate stats removed, sidebar profile card clickable nav
-- [ ] Phase 5 — Deploy (Docker + GitHub Actions)
+- [x] Phase 5 — Deploy (Railway; production hardening complete)
 
 ---
 
 ## Current State
 
-**Last updated:** 2026-04-03
-**Current branch:** `feat/ux-fixes` (ready to PR → `dev`)
-**Next task:** Phase 6A — HOD/Dean roles + Department dashboard
+**Last updated:** 2026-05-21
+**Current branch:** `main`
+**Next task:** Frontend — attendance history UI with edit forms + date picker for backfill
+
+### Phase 5 Progress
+
+- [x] Attendance: Teachers can view past sessions
+- [x] Attendance: Teachers can edit past attendance (single + bulk)
+- [ ] Frontend: Build attendance history UI with edit forms
+- [ ] Frontend: Build date picker for backfill workflow
 
 ### What's working end-to-end
 
 - **Auth:** identifier (email / TCH001 / STU003) + password + hCaptcha + OTP → JWT + silent refresh
 - **Admin:** user CRUD (with optional firstName/lastName), course CRUD, department list, announcement CRUD, timetable CRUD, dashboard stats (single row) + recent activity; user table and student profile show real names with email fallback
-- **Teacher:** course list, mark attendance sessions, enter grades per component, view timetable, view announcements
+- **Teacher:** course list, mark attendance sessions (today + past dates), edit individual past marks, bulk-add missed sessions, enter grades per component, view timetable, view announcements
 - **Student:** self-enroll, view attendance %, view grades + GPA, view timetable, view announcements
 
 ### Key file locations
