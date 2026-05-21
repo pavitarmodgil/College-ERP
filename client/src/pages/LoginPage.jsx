@@ -236,7 +236,7 @@ export default function LoginPage() {
                     </>
                   ) : (
                     <HCaptcha
-                      sitekey={import.meta.env.VITE_HCAPTCHA_SITE_KEY}
+                      sitekey={import.meta.env.VITE_HCAPTCHA_SITE}
                       onVerify={setCaptchaToken}
                       onExpire={() => setCaptchaToken('')}
                       ref={captchaRef}
