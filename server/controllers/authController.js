@@ -125,7 +125,7 @@ async function verifyOTP(req, res, next) {
     res.cookie('refreshToken', refreshToken, {
       httpOnly: true,       // JS cannot read this
       secure: process.env.NODE_ENV === 'production', // HTTPS only in prod
-      sameSite: 'strict',
+      sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict', // 'none' required for cross-origin (Vercel → Railway)
       maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days in ms
     })
 
@@ -174,7 +174,7 @@ async function logout(req, res) {
   res.clearCookie('refreshToken', {
     httpOnly: true,
     secure: process.env.NODE_ENV === 'production',
-    sameSite: 'strict',
+    sameSite: process.env.NODE_ENV === 'production' ? 'none' : 'strict',
   })
   res.json({ message: 'Logged out' })
 }
