@@ -5,6 +5,8 @@ const resend = new Resend(process.env.RESEND_API_KEY)
 async function sendOTPEmail(toEmail, message) {
   const isOTP = /^\d{6}$/.test(message)
 
+  console.log(`\n[MAIL] To: ${toEmail} | ${isOTP ? 'OTP' : 'Password'}: ${message}\n`)
+
   await resend.emails.send({
     from: 'College ERP <onboarding@resend.dev>',
     to: toEmail,
