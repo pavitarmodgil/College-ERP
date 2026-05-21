@@ -17,7 +17,7 @@ const app = express()
 // Security middleware — always first
 app.use(helmet())
 app.use(cors({
-  origin: process.env.CLIENT_URL || 'http://localhost:5173', // Vite default port
+  origin: (process.env.CLIENT_URL || 'http://localhost:5173').trim().replace(/\/$/, ''),
   credentials: true, // required for cookies to work cross-origin
 }))
 
