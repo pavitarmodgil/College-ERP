@@ -1,4 +1,5 @@
 import { useState, useEffect } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import api from '../../lib/api'
 
@@ -11,6 +12,7 @@ const TIME_SLOTS = ['08:00', '09:00', '10:00', '11:00', '12:00', '13:00', '14:00
 const JS_DAY_TO_KEY = { 0: null, 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' }
 
 export default function TeacherTimetablePage() {
+  const navigate = useNavigate()
   const [entries, setEntries] = useState([])
   const [grouped, setGrouped] = useState({})
   const [isLoading, setIsLoading] = useState(true)
@@ -171,12 +173,38 @@ export default function TeacherTimetablePage() {
                               {slotEntries.map((entry) => (
                                 <div
                                   key={entry.id}
-                                  className="flex-1 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-3 flex flex-col justify-center"
+                                  className="group flex-1 bg-primary/5 dark:bg-primary/10 border border-primary/20 rounded-xl p-3 flex flex-col justify-between"
                                 >
-                                  <p className="text-primary font-bold text-sm leading-tight">{entry.course.code}</p>
-                                  <p className="text-on-surface-variant text-xs font-medium mt-0.5">
-                                    {entry.room} • {entry.startTime}–{entry.endTime}
-                                  </p>
+                                  <div>
+                                    <p className="text-primary font-bold text-sm leading-tight">{entry.course.code}</p>
+                                    <p className="text-on-surface-variant text-xs font-medium mt-0.5">
+                                      {entry.room} • {entry.startTime}–{entry.endTime}
+                                    </p>
+                                  </div>
+                                  {/* Quick actions — act straight from the timetable */}
+                                  <div className="flex items-center gap-1 mt-2 opacity-0 group-hover:opacity-100 focus-within:opacity-100 transition-opacity">
+                                    <button
+                                      onClick={() => navigate(`/teacher/attendance/${entry.courseId}`)}
+                                      title="Mark Attendance"
+                                      className="p-1 rounded-md bg-white/70 dark:bg-neutral-800 text-on-surface-variant hover:bg-primary hover:text-white transition-colors"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px] leading-none">how_to_reg</span>
+                                    </button>
+                                    <button
+                                      onClick={() => navigate(`/teacher/grades/${entry.courseId}`)}
+                                      title="Enter Grades"
+                                      className="p-1 rounded-md bg-white/70 dark:bg-neutral-800 text-on-surface-variant hover:bg-primary hover:text-white transition-colors"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px] leading-none">grade</span>
+                                    </button>
+                                    <button
+                                      onClick={() => navigate(`/teacher/grades/${entry.courseId}`)}
+                                      title="View Students"
+                                      className="p-1 rounded-md bg-white/70 dark:bg-neutral-800 text-on-surface-variant hover:bg-primary hover:text-white transition-colors"
+                                    >
+                                      <span className="material-symbols-outlined text-[16px] leading-none">group</span>
+                                    </button>
+                                  </div>
                                 </div>
                               ))}
                             </div>
