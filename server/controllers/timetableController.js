@@ -1,6 +1,41 @@
 const prisma = require('../lib/prisma')
+const { buildStudentInsights, timesOverlap } = require('../lib/timetableInsights')
 
 const DAYS_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+// Detect a scheduling conflict for a prospective entry. Returns a descriptive
+// error string (for a 409 response) or null if the slot is free. A conflict is
+// an *overlap* on the same day + semester for the same teacher, the same room,
+// or the same course. Touching edges (10-11 vs 11-12) are fine.
+async function findConflict({ teacherId, room, dayOfWeek, startTime, endTime, semester, courseId, excludeId }) {
+  const candidates = await prisma.timetableEntry.findMany({
+    where: {
+      semester,
+      dayOfWeek,
+      ...(excludeId ? { id: { not: excludeId } } : {}),
+      OR: [
+        { teacherId: parseInt(teacherId) },
+        { room: room.trim() },
+        { courseId: parseInt(courseId) },
+      ],
+    },
+    select: { teacherId: true, room: true, courseId: true, startTime: true, endTime: true },
+  })
+
+  for (const c of candidates) {
+    if (!timesOverlap(startTime, endTime, c.startTime, c.endTime)) continue
+    if (c.teacherId === parseInt(teacherId)) {
+      return 'Teacher already has a class scheduled at this time'
+    }
+    if (c.room === room.trim()) {
+      return `Room "${room.trim()}" is already occupied at this time`
+    }
+    if (c.courseId === parseInt(courseId)) {
+      return 'This course already has a class scheduled at this time'
+    }
+  }
+  return null
+}
 
 // Helper: sort entries by day then start time
 function sortEntries(entries) {
@@ -137,6 +172,14 @@ async function createEntry(req, res, next) {
       return res.status(404).json({ error: 'Course not found' })
     }
 
+    // Conflict detection — no double-booked teacher, room, or course
+    const conflict = await findConflict({
+      teacherId, room, dayOfWeek, startTime, endTime, semester: semester.trim(), courseId,
+    })
+    if (conflict) {
+      return res.status(409).json({ error: conflict })
+    }
+
     const entry = await prisma.timetableEntry.create({
       data: {
         courseId: parseInt(courseId),
@@ -176,6 +219,25 @@ async function updateEntry(req, res, next) {
     if (room !== undefined) data.room = room.trim()
     if (semester !== undefined) data.semester = semester.trim()
 
+    // Conflict detection against the *effective* values (existing merged with patch)
+    const existing = await prisma.timetableEntry.findUnique({ where: { id } })
+    if (!existing) {
+      return res.status(404).json({ error: 'Timetable entry not found' })
+    }
+    const effective = {
+      teacherId: data.teacherId ?? existing.teacherId,
+      room: data.room ?? existing.room,
+      dayOfWeek: data.dayOfWeek ?? existing.dayOfWeek,
+      startTime: data.startTime ?? existing.startTime,
+      endTime: data.endTime ?? existing.endTime,
+      semester: data.semester ?? existing.semester,
+      courseId: data.courseId ?? existing.courseId,
+    }
+    const conflict = await findConflict({ ...effective, excludeId: id })
+    if (conflict) {
+      return res.status(409).json({ error: conflict })
+    }
+
     const entry = await prisma.timetableEntry.update({
       where: { id },
       data,
@@ -205,9 +267,21 @@ async function deleteEntry(req, res, next) {
   }
 }
 
+// GET /api/timetable/insights — Student only
+// Per-course attendance risk, grade projection, and next assessment.
+async function getInsights(req, res, next) {
+  try {
+    const insights = await buildStudentInsights(req.user.id)
+    res.json(insights)
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getTimetable,
   getSemesters,
+  getInsights,
   createEntry,
   updateEntry,
   deleteEntry,
