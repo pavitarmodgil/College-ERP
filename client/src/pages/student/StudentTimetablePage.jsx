@@ -19,9 +19,43 @@ const ACCENT_COLORS = [
 // Map JS day index to our keys (0 = Sun, no match)
 const JS_DAY_TO_KEY = { 0: null, 1: 'MON', 2: 'TUE', 3: 'WED', 4: 'THU', 5: 'FRI', 6: 'SAT' }
 
+// Compact academic-risk badges shared by grid + overview cards
+function AttendanceRiskBadge({ attendance }) {
+  if (!attendance || attendance.riskLevel === 'SAFE') return null
+  const critical = attendance.riskLevel === 'CRITICAL'
+  return (
+    <span
+      className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold ${
+        critical
+          ? 'bg-error-container/40 text-error'
+          : 'bg-amber-100 text-amber-700 dark:bg-amber-900/30 dark:text-amber-400'
+      }`}
+    >
+      <span className="material-symbols-outlined text-[12px] leading-none">warning</span>
+      Attendance Risk
+      {attendance.classesNeeded > 0 && ` · need ${attendance.classesNeeded}`}
+    </span>
+  )
+}
+
+function GradeRiskBadge({ grade }) {
+  if (!grade || !grade.gradeRisk) return null
+  return (
+    <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-error-container/40 text-error">
+      <span className="material-symbols-outlined text-[12px] leading-none">trending_down</span>
+      Grade Risk
+    </span>
+  )
+}
+
+function formatDueDate(d) {
+  return new Date(d).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })
+}
+
 export default function StudentTimetablePage() {
   const [entries, setEntries] = useState([])
   const [grouped, setGrouped] = useState({})
+  const [insightsByCourse, setInsightsByCourse] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeFilter, setActiveFilter] = useState('ALL')
@@ -40,6 +74,15 @@ export default function StudentTimetablePage() {
       })
       .catch(() => setError('Failed to load timetable'))
       .finally(() => setIsLoading(false))
+
+    // Academic intelligence — non-fatal if it fails
+    api.get('/timetable/insights')
+      .then((res) => {
+        const map = {}
+        for (const c of res.data.courses) map[c.courseId] = c
+        setInsightsByCourse(map)
+      })
+      .catch(() => {})
   }, [])
 
   const uniqueCourses = new Set(entries.map((e) => e.courseId)).size
@@ -176,23 +219,40 @@ export default function StudentTimetablePage() {
                           key={day}
                           className={`h-32 p-2 ${isToday ? 'bg-primary/5' : 'bg-surface dark:bg-neutral-950'}`}
                         >
-                          {slotEntries.length === 0 ? null : slotEntries.map((entry) => (
+                          {slotEntries.length === 0 ? null : slotEntries.map((entry) => {
+                            const ins = insightsByCourse[entry.courseId]
+                            const atRisk = ins && ins.attendance.riskLevel !== 'SAFE'
+                            return (
                             <div
                               key={entry.id}
                               className="h-full w-full bg-white dark:bg-neutral-800 rounded-xl p-3 shadow-sm border border-outline-variant/20 hover:shadow-md transition-shadow cursor-pointer relative overflow-hidden group"
                             >
-                              <div className={`absolute top-0 left-0 w-1 h-full ${courseColorMap[entry.courseId] || 'bg-primary'}`} />
+                              <div className={`absolute top-0 left-0 w-1 h-full ${(atRisk || ins?.grade?.gradeRisk) ? 'bg-error' : (courseColorMap[entry.courseId] || 'bg-primary')}`} />
                               <p className="font-bold text-sm truncate leading-tight group-hover:text-primary transition-colors">
                                 {entry.course.name}
                               </p>
-                              <p className="text-xs text-on-surface-variant mt-1">{entry.teacher.email}</p>
-                              <div className="mt-2">
+                              <p className="text-xs text-on-surface-variant mt-1 truncate">{entry.teacher.email}</p>
+                              <div className="mt-2 flex items-center gap-1.5 flex-wrap">
                                 <span className="inline-block px-2 py-0.5 rounded-md bg-slate-100 dark:bg-neutral-700 text-[10px] font-bold text-slate-600 dark:text-neutral-300 uppercase">
                                   {entry.room}
                                 </span>
+                                {ins && ins.attendance.total > 0 && (
+                                  <span className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                                    atRisk
+                                      ? 'bg-error-container/40 text-error'
+                                      : 'bg-emerald-100 text-emerald-700 dark:bg-emerald-900/30 dark:text-emerald-400'
+                                  }`}>
+                                    {ins.attendance.currentAttendance}%
+                                  </span>
+                                )}
+                                {ins?.grade?.currentLetter && (
+                                  <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-primary/10 text-primary">
+                                    {ins.grade.currentLetter}
+                                  </span>
+                                )}
                               </div>
                             </div>
-                          ))}
+                          )})}
                         </div>
                       )
                     })}
@@ -208,23 +268,67 @@ export default function StudentTimetablePage() {
           <section className="mt-12">
             <h3 className="text-2xl font-extrabold font-headline mb-6">Subject Overview</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
-              {Array.from(new Map(entries.map((e) => [e.courseId, e])).values()).map((entry) => (
+              {Array.from(new Map(entries.map((e) => [e.courseId, e])).values()).map((entry) => {
+                const ins = insightsByCourse[entry.courseId]
+                return (
                 <div
                   key={entry.courseId}
-                  className="bg-surface-container-lowest dark:bg-neutral-900 p-6 rounded-2xl shadow-sm flex items-start gap-4"
+                  className="bg-surface-container-lowest dark:bg-neutral-900 p-6 rounded-2xl shadow-sm"
                 >
-                  <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-primary`}>
-                    <span className="material-symbols-outlined">menu_book</span>
+                  <div className="flex items-start gap-4">
+                    <div className={`h-12 w-12 rounded-full flex items-center justify-center flex-shrink-0 bg-indigo-100 dark:bg-indigo-900/30 text-primary`}>
+                      <span className="material-symbols-outlined">menu_book</span>
+                    </div>
+                    <div className="min-w-0">
+                      <p className="font-bold text-lg leading-tight">{entry.course.name}</p>
+                      <p className="text-sm text-on-surface-variant mt-1">
+                        {entry.course.code} • {entry.course.department?.name || ''}
+                      </p>
+                      <p className="text-xs text-on-surface-variant mt-1 truncate">{entry.teacher.email}</p>
+                    </div>
                   </div>
-                  <div>
-                    <p className="font-bold text-lg leading-tight">{entry.course.name}</p>
-                    <p className="text-sm text-on-surface-variant mt-1">
-                      {entry.course.code} • {entry.course.department?.name || ''}
-                    </p>
-                    <p className="text-xs text-on-surface-variant mt-1">{entry.teacher.email}</p>
-                  </div>
+
+                  {ins && (
+                    <div className="mt-4 pt-4 border-t border-outline-variant/10 space-y-2.5">
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-on-surface-variant font-medium">Attendance</span>
+                        <span className={`font-bold ${
+                          ins.attendance.total === 0
+                            ? 'text-on-surface-variant'
+                            : ins.attendance.riskLevel === 'SAFE' ? 'text-emerald-600' : 'text-error'
+                        }`}>
+                          {ins.attendance.total > 0 ? `${ins.attendance.currentAttendance}%` : 'No data'}
+                        </span>
+                      </div>
+                      <div className="flex items-center justify-between text-sm">
+                        <span className="text-on-surface-variant font-medium">
+                          {ins.grade.hasFinal ? 'Grade' : 'Projected Grade'}
+                        </span>
+                        <span className="font-bold">
+                          {ins.grade.currentLetter || ins.grade.projectedGrade || '—'}
+                          {!ins.grade.hasFinal && ins.grade.projectedGrade && (
+                            <span className="text-[10px] font-medium text-on-surface-variant ml-1">proj.</span>
+                          )}
+                        </span>
+                      </div>
+                      {ins.nextAssessment && (
+                        <div className="flex items-center justify-between text-sm gap-2">
+                          <span className="text-on-surface-variant font-medium flex-shrink-0">Next</span>
+                          <span className="font-medium text-xs text-right truncate">
+                            {ins.nextAssessment.title} · {formatDueDate(ins.nextAssessment.dueDate)}
+                          </span>
+                        </div>
+                      )}
+                      {(ins.attendance.riskLevel !== 'SAFE' || ins.grade.gradeRisk) && (
+                        <div className="flex flex-wrap gap-2 pt-1">
+                          <AttendanceRiskBadge attendance={ins.attendance} />
+                          <GradeRiskBadge grade={ins.grade} />
+                        </div>
+                      )}
+                    </div>
+                  )}
                 </div>
-              ))}
+              )})}
             </div>
           </section>
         )}
