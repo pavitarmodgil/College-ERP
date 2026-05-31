@@ -699,6 +699,29 @@ async function main() {
   }
   console.log('✓ Timetable: 27 entries')
 
+  // ── Assessments (Smart Timetable 2.0) ─────────────────────────────────────
+  // Due dates are relative to "now" so the upcoming/overdue widgets always demo
+  // well regardless of when the seed runs. Idempotent: clear semester first.
+  await prisma.assessment.deleteMany({ where: { semester: S } })
+  const dueIn = (days) => {
+    const d = new Date()
+    d.setHours(12, 0, 0, 0)
+    d.setDate(d.getDate() + days)
+    return d
+  }
+  const assessments = [
+    { title: 'Operating Systems — Quiz 3', courseId: cse210.id, dueDate: dueIn(0), type: 'QUIZ', semester: S, createdById: tch1.id },
+    { title: 'DBMS — Assignment 4', courseId: cse320.id, dueDate: dueIn(1), type: 'ASSIGNMENT', semester: S, createdById: tch100.id },
+    { title: 'Compiler Design — Mini Project', courseId: cse340.id, dueDate: dueIn(7), type: 'PROJECT', semester: S, createdById: tch100.id },
+    { title: 'Machine Learning — Term Project', courseId: cse450.id, dueDate: dueIn(10), type: 'PROJECT', semester: S, createdById: tch1.id },
+    { title: 'Operating Systems — Final Exam', courseId: cse210.id, dueDate: dueIn(14), type: 'EXAM', semester: S, createdById: tch1.id },
+    { title: 'DBMS — Lab Submission (overdue)', courseId: cse320.id, dueDate: dueIn(-2), type: 'ASSIGNMENT', semester: S, createdById: tch100.id },
+  ]
+  for (const a of assessments) {
+    await prisma.assessment.create({ data: a })
+  }
+  console.log(`✓ Assessments: ${assessments.length}`)
+
   // ── Announcements ─────────────────────────────────────────────────────────
   const announcements = [
     // STUDENT (4)
