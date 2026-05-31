@@ -3,42 +3,11 @@ import Sidebar from '../components/Sidebar'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 import AnnouncementsWidget from '../components/AnnouncementsWidget'
+import AcademicCommandCenter from '../components/AcademicCommandCenter'
+import UpcomingAssessmentsWidget from '../components/UpcomingAssessmentsWidget'
 
-const courseCards = [
-  {
-    code: 'CS502',
-    codeColor: 'bg-indigo-50 text-primary',
-    title: 'Advanced Algorithms & Complexity',
-    pct: 90,
-    pctColor: '#3525cd',
-    trackColor: '#e2dfff',
-    ringOffset: 15,
-    components: [
-      { label: 'Internal', score: 28, max: 30, barW: '93%', barColor: 'bg-primary' },
-      { label: 'Mid-Term', score: 18, max: 20, barW: '90%', barColor: 'bg-primary' },
-      { label: 'Final', pending: true },
-    ],
-  },
-  {
-    code: 'CS504',
-    codeColor: 'bg-amber-50 text-tertiary',
-    title: 'Distributed Systems Architecture',
-    pct: 78,
-    pctColor: '#7e3000',
-    trackColor: '#ffdbcc',
-    ringOffset: 35,
-    components: [
-      { label: 'Internal', score: 22, max: 30, barW: '73%', barColor: 'bg-tertiary' },
-      { label: 'Mid-Term', score: 17, max: 20, barW: '85%', barColor: 'bg-tertiary' },
-      { label: 'Final', score: 39, max: 50, barW: '78%', barColor: 'bg-tertiary' },
-    ],
-  },
-]
-
-const upcomingExams = [
-  { month: 'Oct', day: '24', title: 'Neural Networks & ML', time: '09:00 AM • Room 402' },
-  { month: 'Oct', day: '27', title: 'Cybersecurity Principles', time: '02:30 PM • Main Hall' },
-]
+// Circumference of the r=24 progress ring (2·π·24 ≈ 150)
+const RING_C = 150
 
 export default function StudentDashboard() {
   const { user } = useAuth()
@@ -49,6 +18,12 @@ export default function StudentDashboard() {
   const [enrolledCount, setEnrolledCount] = useState(null)
   const [enrollingId, setEnrollingId] = useState(null)
   const [enrollMessage, setEnrollMessage] = useState('')
+
+  // Real academic metrics
+  const [attendancePct, setAttendancePct] = useState(null)
+  const [gpa, setGpa] = useState(null)
+  const [perfCourses, setPerfCourses] = useState([])
+  const [upcomingCount, setUpcomingCount] = useState(null)
 
   async function fetchAvailable() {
     try {
@@ -68,9 +43,32 @@ export default function StudentDashboard() {
     }
   }
 
+  async function fetchAcademics() {
+    try {
+      const [att, grd, asmt] = await Promise.all([
+        api.get('/attendance/my'),
+        api.get('/grades/my'),
+        api.get('/assessments', { params: { upcoming: 1 } }),
+      ])
+      setAttendancePct(att.data.overallPercentage ?? null)
+      setGpa(grd.data.gpa ?? null)
+
+      // Merge attendance % into grade courses for the performance breakdown
+      const attByCourse = {}
+      ;(att.data.courses || []).forEach((c) => { attByCourse[c.courseId] = c.percentage })
+      setPerfCourses(
+        (grd.data.courses || []).map((c) => ({ ...c, attendancePct: attByCourse[c.courseId] ?? null }))
+      )
+      setUpcomingCount((asmt.data.assessments || []).length)
+    } catch {
+      // non-fatal
+    }
+  }
+
   useEffect(() => {
     fetchAvailable()
     fetchEnrolledCount()
+    fetchAcademics()
   }, [])
 
   async function handleEnroll(courseId) {
@@ -142,6 +140,9 @@ export default function StudentDashboard() {
             </h2>
           </div>
 
+          {/* Academic Command Center */}
+          <AcademicCommandCenter />
+
           {/* Stats Bento Grid */}
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
             <div className="bg-surface-container-lowest p-6 rounded-2xl transition-transform hover:scale-[1.02] duration-300">
@@ -161,12 +162,14 @@ export default function StudentDashboard() {
                   <span className="material-symbols-outlined">calendar_today</span>
                 </div>
                 <div className="flex gap-1 items-center">
-                  <span className="w-1.5 h-1.5 rounded-full bg-green-500" />
-                  <span className="text-[10px] font-bold text-green-600">On Track</span>
+                  <span className={`w-1.5 h-1.5 rounded-full ${attendancePct == null || attendancePct >= 75 ? 'bg-green-500' : 'bg-error'}`} />
+                  <span className={`text-[10px] font-bold ${attendancePct == null || attendancePct >= 75 ? 'text-green-600' : 'text-error'}`}>
+                    {attendancePct == null || attendancePct >= 75 ? 'On Track' : 'At Risk'}
+                  </span>
                 </div>
               </div>
               <p className="text-slate-500 text-sm font-medium">Attendance %</p>
-              <h3 className="text-3xl font-bold mt-1">—</h3>
+              <h3 className="text-3xl font-bold mt-1">{attendancePct != null ? `${attendancePct}%` : '—'}</h3>
             </div>
 
             {/* Featured GPA card */}
@@ -178,7 +181,7 @@ export default function StudentDashboard() {
                 <span className="text-[10px] font-bold bg-white/20 text-white px-2 py-1 rounded-full">Top 5%</span>
               </div>
               <p className="text-on-primary-container text-sm font-medium">Cumulative GPA</p>
-              <h3 className="text-3xl font-bold mt-1">—</h3>
+              <h3 className="text-3xl font-bold mt-1">{gpa != null ? gpa.toFixed(2) : '—'}</h3>
             </div>
 
             <div className="bg-surface-container-lowest p-6 rounded-2xl transition-transform hover:scale-[1.02] duration-300">
@@ -186,10 +189,10 @@ export default function StudentDashboard() {
                 <div className="p-3 bg-tertiary-fixed text-tertiary rounded-xl">
                   <span className="material-symbols-outlined">event_note</span>
                 </div>
-                <span className="text-[10px] font-bold text-error bg-error-container px-2 py-1 rounded-full">3 Days Left</span>
+                <span className="text-[10px] font-bold text-error bg-error-container px-2 py-1 rounded-full">Deadlines</span>
               </div>
-              <p className="text-slate-500 text-sm font-medium">Upcoming Exams</p>
-              <h3 className="text-3xl font-bold mt-1">{upcomingExams.length.toString().padStart(2, '0')}</h3>
+              <p className="text-slate-500 text-sm font-medium">Upcoming Assessments</p>
+              <h3 className="text-3xl font-bold mt-1">{upcomingCount != null ? upcomingCount.toString().padStart(2, '0') : '—'}</h3>
             </div>
           </div>
 
@@ -207,55 +210,69 @@ export default function StudentDashboard() {
             </div>
 
             <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-              {courseCards.map((c) => (
-                <div key={c.code} className="bg-surface-container-lowest p-8 rounded-2xl space-y-8">
+              {perfCourses.length === 0 ? (
+                <p className="text-sm text-on-surface-variant">No course performance data yet.</p>
+              ) : perfCourses.map((c) => {
+                const pct = c.averagePercentage ?? 0
+                const comps = [
+                  { label: 'Internal', g: c.grades?.INTERNAL },
+                  { label: 'Mid-Term', g: c.grades?.MID_TERM },
+                  { label: 'Final', g: c.grades?.FINAL },
+                ]
+                return (
+                <div key={c.courseId} className="bg-surface-container-lowest p-8 rounded-2xl space-y-8">
                   <div className="flex justify-between items-start">
                     <div>
-                      <span className={`${c.codeColor} text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider uppercase`}>
-                        {c.code}
+                      <span className="bg-primary/10 text-primary text-[10px] font-extrabold px-3 py-1 rounded-full tracking-wider uppercase">
+                        {c.courseCode}
                       </span>
-                      <h4 className="text-xl font-bold mt-2 font-headline">{c.title}</h4>
+                      <h4 className="text-xl font-bold mt-2 font-headline">{c.courseName}</h4>
+                      <p className="text-xs text-on-surface-variant mt-1">
+                        Attendance {c.attendancePct != null ? `${c.attendancePct}%` : '—'}
+                        {' · '}
+                        {c.overallGrade ? `Grade ${c.overallGrade}` : 'In progress'}
+                      </p>
                     </div>
-                    {/* Progress ring */}
+                    {/* Progress ring — average marks */}
                     <div className="w-14 h-14 relative flex items-center justify-center flex-shrink-0">
                       <svg className="w-full h-full -rotate-90" viewBox="0 0 56 56">
-                        <circle cx="28" cy="28" r="24" fill="none" stroke={c.trackColor} strokeWidth="4" />
+                        <circle cx="28" cy="28" r="24" fill="none" stroke="#e2dfff" strokeWidth="4" />
                         <circle
                           cx="28" cy="28" r="24"
-                          fill="none" stroke={c.pctColor}
-                          strokeDasharray="150"
-                          strokeDashoffset={c.ringOffset}
+                          fill="none" stroke="#3525cd"
+                          strokeDasharray={RING_C}
+                          strokeDashoffset={RING_C * (1 - pct / 100)}
                           strokeLinecap="round"
                           strokeWidth="4"
                         />
                       </svg>
-                      <span className="absolute text-[10px] font-bold">{c.pct}%</span>
+                      <span className="absolute text-[10px] font-bold">{pct}%</span>
                     </div>
                   </div>
 
                   <div className="grid grid-cols-3 gap-4">
-                    {c.components.map((comp) => (
+                    {comps.map((comp) => (
                       <div
                         key={comp.label}
-                        className={`bg-surface-container-low p-4 rounded-xl ${comp.pending ? 'border border-dashed border-slate-200' : ''}`}
+                        className={`bg-surface-container-low p-4 rounded-xl ${!comp.g ? 'border border-dashed border-slate-200 dark:border-neutral-700' : ''}`}
                       >
                         <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">{comp.label}</p>
-                        {comp.pending ? (
+                        {!comp.g ? (
                           <span className="text-xs text-slate-400 italic">Pending</span>
                         ) : (
                           <div className="flex items-end gap-1">
-                            <span className="text-lg font-bold">{comp.score}</span>
-                            <span className="text-[10px] text-slate-400 pb-1">/{comp.max}</span>
+                            <span className="text-lg font-bold">{comp.g.marks}</span>
+                            <span className="text-[10px] text-slate-400 pb-1">/100</span>
                           </div>
                         )}
-                        <div className="w-full bg-slate-200 h-1 rounded-full mt-2 overflow-hidden">
-                          {!comp.pending && <div className={`${comp.barColor} h-full`} style={{ width: comp.barW }} />}
+                        <div className="w-full bg-slate-200 dark:bg-neutral-700 h-1 rounded-full mt-2 overflow-hidden">
+                          {comp.g && <div className="bg-primary h-full" style={{ width: `${comp.g.marks}%` }} />}
                         </div>
                       </div>
                     ))}
                   </div>
                 </div>
-              ))}
+              )})}
             </div>
           </div>
 
@@ -283,29 +300,10 @@ export default function StudentDashboard() {
 
             <div className="bg-surface-container-lowest rounded-2xl p-8">
               <div className="flex justify-between items-center mb-6">
-                <h4 className="font-bold font-headline">Upcoming Exams</h4>
-                <span className="material-symbols-outlined text-slate-400">more_horiz</span>
+                <h4 className="font-bold font-headline">Upcoming Assessments</h4>
+                <a href="/student/timetable" className="material-symbols-outlined text-slate-400 hover:text-primary">more_horiz</a>
               </div>
-              <div className="space-y-6">
-                {upcomingExams.map((exam) => (
-                  <div key={exam.title} className="flex gap-4">
-                    <div className="flex-shrink-0 w-12 h-14 bg-slate-50 rounded-xl flex flex-col items-center justify-center border border-slate-100">
-                      <span className="text-[10px] font-bold text-slate-400 uppercase">{exam.month}</span>
-                      <span className="text-xl font-bold text-primary">{exam.day}</span>
-                    </div>
-                    <div>
-                      <p className="font-bold text-sm">{exam.title}</p>
-                      <p className="text-xs text-slate-500 mt-1 flex items-center gap-1">
-                        <span className="material-symbols-outlined text-xs">schedule</span>
-                        {exam.time}
-                      </p>
-                    </div>
-                  </div>
-                ))}
-                <button className="w-full py-4 border-2 border-dashed border-slate-100 rounded-xl text-slate-400 font-bold text-xs hover:bg-slate-50 transition-colors uppercase tracking-widest">
-                  Full Schedule
-                </button>
-              </div>
+              <UpcomingAssessmentsWidget limit={5} />
             </div>
           </div>
 
