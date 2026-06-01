@@ -51,13 +51,13 @@ async function ensureAnnouncement(data) {
 
 async function main() {
   // ── Pre-flight: free conflicting IDs from previous seed runs ──────────────
-  // Teacher IDs being reassigned: TCH002 (harveen: TCH004→TCH002),
-  // TCH003 (priya.sharma: TCH003→TCH004, rajesh.patel taking TCH003),
-  // TCH005/TCH006 (vikram/anjali freed for new users)
+  // Teacher IDs being reassigned: TCH001 (now pavitar's email), TCH002 (harveen),
+  // TCH003 (rajesh.patel), TCH005/TCH006 freed for new users
   await prisma.user.updateMany({
     where: {
       email: {
         in: [
+          'aman.kumar@uni.com',       // TCH001 → moving to pavitar's teacher email
           'rajesh.singh@uni.com',
           'vikram.patel@uni.com',
           'anjali.gupta@uni.com',
@@ -69,12 +69,12 @@ async function main() {
     },
     data: { teacherId: null },
   })
-  // Student IDs being reassigned (aseemkamra22: STU001→STU100, others freed for new users)
+  // Student IDs being reassigned (STU100 → moving to pavitar's student email)
   await prisma.user.updateMany({
     where: {
       email: {
         in: [
-          'aseemkamra22@gmail.com',
+          'aseemkamra22@gmail.com',   // STU100 → moving to pavitarmodgil1512@gmail.com
           'rohan.sharma@uni.com',
           'kavya.nair@uni.com',
           'aditya.verma@uni.com',
@@ -139,14 +139,14 @@ async function main() {
   // ── Teachers ──────────────────────────────────────────────────────────────
   // All teacherIds are free after pre-flight — can run in parallel
   const [tch1, tch2, tch3, tch4, tch5, tch6, tch10, tch100] = await Promise.all([
-    // TCH001 — Aman Kumar (CSE, no change)
+    // TCH001 — Pavitar Modgil (CSE, your teacher account)
     prisma.user.upsert({
-      where: { email: 'aman.kumar@uni.com' },
-      update: { firstName: 'Aman', lastName: 'Kumar', teacherId: 'TCH001' },
+      where: { email: 'pavitar0883.becse24@chitkara.edu.in' },
+      update: { firstName: 'Pavitar', lastName: 'Modgil', teacherId: 'TCH001', departmentId: cseDept.id },
       create: {
-        email: 'aman.kumar@uni.com',
-        firstName: 'Aman',
-        lastName: 'Kumar',
+        email: 'pavitar0883.becse24@chitkara.edu.in',
+        firstName: 'Pavitar',
+        lastName: 'Modgil',
         password: teacherPwd,
         role: 'TEACHER',
         teacherId: 'TCH001',
@@ -267,14 +267,14 @@ async function main() {
     },
   })
 
-  // STU100 — aseemkamra22 (CSE, was STU001, now demo student)
+  // STU100 — Pavitar Modgil (CSE, your student account — 4 courses, full academic data)
   const stuDemo = await prisma.user.upsert({
-    where: { email: 'aseemkamra22@gmail.com' },
-    update: { studentId: 'STU100', firstName: 'Aseem', lastName: 'Kamra', departmentId: cseDept.id },
+    where: { email: 'pavitarmodgil1512@gmail.com' },
+    update: { studentId: 'STU100', firstName: 'Pavitar', lastName: 'Modgil', departmentId: cseDept.id },
     create: {
-      email: 'aseemkamra22@gmail.com',
-      firstName: 'Aseem',
-      lastName: 'Kamra',
+      email: 'pavitarmodgil1512@gmail.com',
+      firstName: 'Pavitar',
+      lastName: 'Modgil',
       password: studentPwd,
       role: 'STUDENT',
       studentId: 'STU100',
@@ -833,9 +833,9 @@ async function main() {
   console.log('')
   console.log('Test accounts (password shown):')
   console.log('  Admin  : pavitarmodgil001@gmail.com  admin123')
-  console.log('  Teacher: aman.kumar@uni.com          teacher123  (TCH001 — 2 courses)')
-  console.log('  Teacher: abheyjeet100@gmail.com      teacher123  (TCH100 — 2 courses)')
-  console.log('  Student: aseemkamra22@gmail.com      student123  (STU100 — demo, 4 courses)')
+  console.log('  Teacher: pavitar0883.becse24@chitkara.edu.in  teacher123  (TCH001 — 2 courses)')
+  console.log('  Teacher: abheyjeet100@gmail.com              teacher123  (TCH100 — 2 courses)')
+  console.log('  Student: pavitarmodgil1512@gmail.com         student123  (STU100 — demo, 4 courses)')
   console.log('  Student: aseem.kamra@uni.com         student123  (STU003 — 100% attendance)')
   console.log('  Student: arjun.verma@uni.com         student123  (STU005 — high performer)')
   console.log('  Student: poor.performer@uni.com      student123  (STU006 — at-risk)')
