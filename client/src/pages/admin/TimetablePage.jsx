@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from 'react'
+import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
 import TimetableEntryFormModal from '../../components/TimetableEntryFormModal'
 import api from '../../lib/api'
@@ -13,6 +14,7 @@ const DAY_COLORS = {
 }
 
 export default function AdminTimetablePage() {
+  const navigate = useNavigate()
   const [entries, setEntries] = useState([])
   const [semesters, setSemesters] = useState([])
   const [activeSemester, setActiveSemester] = useState('')
@@ -123,13 +125,22 @@ export default function AdminTimetablePage() {
               </div>
             )}
 
-            <button
-              onClick={openCreate}
-              className="bg-primary-container text-white px-6 py-3 rounded-full flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
-            >
-              <span className="material-symbols-outlined text-lg">add</span>
-              <span className="font-bold text-sm">Add Entry</span>
-            </button>
+            <div className="flex items-center gap-3">
+              <button
+                onClick={() => navigate('/admin/timetable/generator')}
+                className="flex items-center gap-2 px-5 py-3 rounded-full bg-surface-container-low dark:bg-neutral-800 font-bold text-sm hover:bg-surface-container-high transition-colors"
+              >
+                <span className="material-symbols-outlined text-lg">auto_awesome</span>
+                Auto Generator
+              </button>
+              <button
+                onClick={openCreate}
+                className="bg-primary-container text-white px-6 py-3 rounded-full flex items-center gap-2 hover:scale-[1.02] active:scale-95 transition-all shadow-lg shadow-primary/20"
+              >
+                <span className="material-symbols-outlined text-lg">add</span>
+                <span className="font-bold text-sm">Add Entry</span>
+              </button>
+            </div>
           </div>
         </section>
 

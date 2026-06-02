@@ -27,7 +27,16 @@
       "Bash(taskkill /PID 10788 /F)",
       "Bash(powershell -Command \"Stop-Process -Id 10788 -Force\")",
       "Read(//d/folder''''''''s/**)",
-      "Bash(node -e \":*)"
+      "Bash(node -e \":*)",
+      "Bash(git fetch *)",
+      "Bash(git add *)",
+      "Bash(git commit -m ' *)",
+      "Bash(git checkout *)",
+      "Bash(git merge feat/ux-fixes --no-ff -m ' *)",
+      "PowerShell(New-Item -ItemType Directory -Force \"D:\\\\Backend_Project_4th_Sem\\\\College-ERP\\\\prisma\\\\migrations\\\\20260520000000_init_postgres\")",
+      "Bash(git push *)",
+      "Bash(npx prisma *)",
+      "Bash(npm uninstall *)"
     ]
   }
 }

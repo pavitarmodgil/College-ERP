@@ -16,8 +16,8 @@ Built as a production-learning project — every pattern chosen to mirror indust
 | Styling | Tailwind CSS + shadcn/ui | 4.x | Utility-first, zero runtime, composable primitives |
 | Relational DB | PostgreSQL via Prisma ORM | Prisma **5.x** | Type-safe queries, schema-first migrations |
 | Cache / OTP | Redis via ioredis | 5.x | Sub-millisecond TTL keys; OTP & rate-limit state |
-| Auth | JWT + bcrypt + OTP | JWT 9.x, bcrypt 6.x | Stateless access token + httpOnly refresh cookie |
-| Email | Nodemailer (Gmail) | 8.x | OTP delivery; swappable transport |
+| Auth | JWT + bcryptjs + OTP | JWT 9.x, bcryptjs 2.x | Stateless access token + httpOnly refresh cookie |
+| Email | Resend HTTP API | resend 6.x | OTP delivery; Railway blocks SMTP ports — HTTP API required |
 | CAPTCHA | hCaptcha | — | Bot protection on public login endpoint |
 
 > **PINNED:** Stay on Prisma 5.x. Prisma 7 broke `env()` resolution inside `schema.prisma`. Do not upgrade until Phase 5 (Docker) where the issue is re-evaluated with the containerised env setup.
@@ -44,8 +44,8 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │   │       ├── TeacherDashboard.jsx
 │   │       ├── StudentDashboard.jsx
 │   │       ├── AnnouncementsPage.jsx  (shared teacher + student)
-│   │       ├── admin/             6 pages — Users, Courses, Departments, Timetable, Announcements, StudentProfile
-│   │       ├── teacher/           5 pages — Attendance, AttendanceSession, Grades, GradeEntry, Timetable
+│   │       ├── admin/             7 pages — Users, Courses, Departments, Timetable, Announcements, StudentProfile, AdminProfile
+│   │       ├── teacher/           6 pages — Attendance, AttendanceSession, AttendanceHistory, Grades, GradeEntry, Timetable
 │   │       └── student/           3 pages — Attendance, Grades, Timetable
 │
 ├── server/
@@ -59,12 +59,12 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │   └── lib/
 │       ├── prisma.js              Singleton PrismaClient export
 │       ├── redis.js               Singleton ioredis client
-│       ├── mailer.js              Nodemailer transport + sendOTP helper
+│       ├── mailer.js              Resend HTTP API client + sendOTPEmail helper
 │       └── gradeUtils.js          Pure functions: marks → letter grade, GPA calculation
 │
 ├── prisma/
 │   ├── schema.prisma              9 models, 4 enums
-│   ├── seed.js                    1 dept + 4 test users (bcrypt hashed)
+│   ├── seed.js                    3 depts, 20 users, 9 courses, full academic records (bcryptjs hashed)
 │   └── migrations/
 │
 ├── scripts/
@@ -111,11 +111,13 @@ POST /api/auth/login
   1. Detect identifier type: STU → studentId field, TCH → teacherId field, @ → email field
   2. Query DB for matching user
   3. Verify hCaptcha token with hCaptcha API  (abort on failure)
-  4. bcrypt.compare(submitted, user.password)
-  5. If mustResetPassword → return { mustReset: true }, no OTP issued
-  6. Generate 6-digit OTP → SET redis:otp:{email} OTP EX 300
-  7. Email OTP via Nodemailer
-  8. Return { maskedEmail, lookupEmail }
+     Dev bypass: captchaToken = "dev-bypass" when NODE_ENV=development
+  4. bcryptjs.compare(submitted, user.password)
+  5. Generate 6-digit OTP → SET redis:otp:{email} OTP EX 300
+  6. Email OTP via Resend HTTP API
+  7. Return { maskedEmail, lookupEmail, mustResetPassword }
+     NOTE: OTP is always sent. mustResetPassword is a flag in the response.
+     The frontend redirects to /reset-password after OTP verify if true.
 
 POST /api/auth/verify-otp
   1. GET redis:otp:{email}
@@ -143,7 +145,7 @@ POST /api/auth/logout
 | Model | Key Fields | Unique Constraints |
 |---|---|---|
 | `Department` | name, code | code |
-| `User` | email, role, studentId?, teacherId?, isActive, mustResetPassword | email, studentId, teacherId |
+| `User` | email, firstName?, lastName?, role, studentId?, teacherId?, isActive, mustResetPassword | email, studentId, teacherId |
 | `Course` | code, type, credits, isActive | code |
 | `Enrollment` | userId, courseId, enrolledAt | [userId, courseId] |
 | `CourseTeacher` | courseId, userId | [courseId, userId] |
@@ -186,7 +188,7 @@ POST /api/auth/logout
 | POST | `/verify-otp` | PUBLIC | OTP → JWT access token + refresh cookie |
 | POST | `/refresh` | PUBLIC (cookie) | New access token from refresh cookie |
 | POST | `/logout` | AUTH | Clear refresh cookie |
-| POST | `/reset-password` | AUTH | First-login password reset |
+| POST | `/reset-password` | PUBLIC | First-login password reset (takes email + newPassword in body) |
 | GET | `/me` | AUTH | Returns decoded JWT payload |
 
 ### Users · `/api/users` — ADMIN only
@@ -204,22 +206,27 @@ POST /api/auth/logout
 ### Courses · `/api/courses`
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/` | ALL | Paginated courses with filters |
+| GET | `/available` | STUDENT | Courses the student is NOT enrolled in (browse for self-enroll) |
+| GET | `/` | ALL | Paginated, role-scoped (admin: all; teacher: assigned; student: active) |
 | GET | `/:id` | ALL | Course + teachers + enrollments |
 | POST | `/` | ADMIN | Create course |
 | PATCH | `/:id` | ADMIN | Update course |
-| PATCH | `/:id/deactivate` | ADMIN | Soft-disable |
-| POST | `/:id/assign-teacher` | ADMIN | Add teacher to course |
-| POST | `/:id/enroll` | ADMIN | Enroll a student |
-| POST | `/:id/self-enroll` | STUDENT | Student self-enroll |
+| PATCH | `/:id/deactivate` | ADMIN | Soft-disable (blocked if enrollments exist) |
+| POST | `/:id/teachers` | ADMIN | Assign teacher to course |
+| DELETE | `/:id/teachers/:userId` | ADMIN | Remove teacher from course |
+| POST | `/:id/enroll` | STUDENT | Student self-enroll |
+| POST | `/:id/enrollments` | ADMIN | Admin enrolls a student |
+| DELETE | `/:id/enrollments/:userId` | ADMIN | Admin removes a student |
 
 ### Attendance · `/api/attendance`
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
-| GET | `/courses` | TEACHER | Teacher's assigned courses |
-| GET | `/:courseId/students` | TEACHER | Students enrolled in course |
-| POST | `/:courseId/mark` | TEACHER | Mark attendance for a date (upsert) |
 | GET | `/my` | STUDENT | Attendance % per course |
+| GET | `/courses` | TEACHER | Teacher's assigned courses with today's submission status |
+| GET | `/:courseId/session` | TEACHER | Get session for a date (defaults today; `?date=YYYY-MM-DD` for past) |
+| POST | `/:courseId/session` | TEACHER | Save/upsert full session (body: `{ students, date? }`) |
+| GET | `/:courseId/history` | TEACHER | List all past sessions with present/absent counts |
+| PATCH | `/:enrollmentId` | TEACHER | Edit single attendance record (body: `{ date, present }`) |
 
 ### Grades · `/api/grades`
 | Method | Path | Auth | Purpose |
@@ -264,9 +271,11 @@ All routes defined in `client/src/App.jsx` — **edit only this file when adding
 | `/admin/departments` | ADMIN | DepartmentsPage |
 | `/admin/announcements` | ADMIN | AdminAnnouncementsPage |
 | `/admin/timetable` | ADMIN | AdminTimetablePage |
+| `/admin/profile` | ADMIN | AdminProfilePage (placeholder — Phase 6) |
 | `/teacher` | TEACHER | TeacherDashboard |
 | `/teacher/attendance` | TEACHER | TeacherAttendancePage |
-| `/teacher/attendance/:courseId` | TEACHER | AttendanceSessionPage |
+| `/teacher/attendance/:courseId` | TEACHER | AttendanceSessionPage (date picker — today + past) |
+| `/teacher/attendance/:courseId/history` | TEACHER | AttendanceHistoryPage |
 | `/teacher/grades` | TEACHER | TeacherGradesPage |
 | `/teacher/grades/:courseId` | TEACHER | GradeEntryPage |
 | `/teacher/announcements` | TEACHER | AnnouncementsPage |
@@ -305,13 +314,19 @@ npx prisma generate                               # regenerate client after sche
 DATABASE_URL            PostgreSQL connection string
 JWT_SECRET              Long random string — signs access tokens
 JWT_REFRESH_SECRET      Different long random string — signs refresh tokens
-REDIS_URL               Redis connection string
-EMAIL_USER              Gmail address
-EMAIL_PASS              Gmail app password (not account password)
-HCAPTCHA_SECRET         hCaptcha secret key
-VITE_HCAPTCHA_SITE      hCaptcha site key (client-side)
-VITE_API_URL            http://localhost:4000/api (local dev)
+REDIS_HOST              Redis hostname (127.0.0.1 locally, Upstash host in prod)
+REDIS_PORT              Redis port (6379 locally, Upstash port in prod)
+REDIS_PASSWORD          Redis auth password (blank locally; required for Upstash)
+REDIS_TLS               Set to "true" for Upstash/production TLS; omit for local
+RESEND_API_KEY          Resend API key — used for OTP and password-reset emails
+HCAPTCHA_SECRET         hCaptcha secret key (server-side verification)
+CLIENT_URL              Frontend origin for CORS (http://localhost:5173 locally)
 API_PORT                4000
+NODE_ENV                development | production
+
+# In client/.env:
+VITE_API_URL            http://localhost:4000/api (local dev) or deployed API URL
+VITE_HCAPTCHA_SITE      hCaptcha site key (client-side, NOT VITE_HCAPTCHA_SITE_KEY)
 ```
 
 ---
@@ -333,14 +348,48 @@ main          ← production-ready, never commit directly
 
 ## Seed Data
 
-| Email | Role | ID | Password |
-|---|---|---|---|
-| `pavitarmodgil001@gmail.com` | ADMIN | — | admin123 |
-| `aman.kumar@uni.com` | TEACHER | TCH001 | teacher123 |
-| `harveen.kaur@uni.com` | TEACHER | TCH002 | teacher123 |
-| `aseem.kamra@uni.com` | STUDENT | STU003 | student123 |
+Run `npx prisma db seed` to populate. The seed is idempotent (upsert-safe to re-run).
 
-Seeded department: **CSE** (Computer Science & Engineering)
+**Departments:** CSE · ECE · ME
+
+**Admins** (password: `admin123`):
+
+| Email | Notes |
+|---|---|
+| `pavitarmodgil001@gmail.com` | Primary admin (no firstName/lastName) |
+| `admin.secondary@uni.com` | Secondary Admin |
+
+**Teachers** (password: `teacher123`):
+
+| Email | ID | Department |
+|---|---|---|
+| `aman.kumar@uni.com` | TCH001 | CSE |
+| `rajesh.singh@uni.com` | TCH002 | CSE |
+| `priya.sharma@uni.com` | TCH003 | ECE |
+| `harveen.kaur@uni.com` | TCH004 | CSE (mustResetPassword: true) |
+| `vikram.patel@uni.com` | TCH005 | ME |
+| `anjali.gupta@uni.com` | TCH006 | ECE |
+| `neha.mishra@uni.com` | TCH007 | CSE |
+| `abheyjeet100@gmail.com` | TCH100 | CSE (legacy, no name) |
+
+**Students** (password: `student123`):
+
+| Email | ID | Department |
+|---|---|---|
+| `aseemkamra22@gmail.com` | STU001 | CSE |
+| `rohan.sharma@uni.com` | STU002 | CSE |
+| `aseem.kamra@uni.com` | STU003 | CSE (legacy, no name) |
+| `kavya.nair@uni.com` | STU004 | ECE |
+| `aditya.verma@uni.com` | STU005 | ECE |
+| `disha.mehta@uni.com` | STU006 | ME |
+| `arjun.mishra@uni.com` | STU007 | ME |
+| `zara.khan@uni.com` | STU008 | CSE |
+| `tanvi.singh@uni.com` | STU009 | CSE |
+| `priya.jain@uni.com` | STU010 | CSE |
+
+**Seed totals:** 3 departments · 9 courses · 11 course-teacher assignments · 19 enrollments · 133 attendance records · 24 grade entries · 28 timetable entries · 12 announcements
+
+> Users created before the `firstName`/`lastName` migration have `null` in those fields and fall back to email-derived display names throughout the UI.
 
 ---
 
@@ -351,12 +400,19 @@ Seeded department: **CSE** (Computer Science & Engineering)
 - [x] Phase 2 — Authentication (JWT + OTP + Redis + hCaptcha + rate limiting)
 - [x] Phase 3 — Frontend Upgrade (Vite + React 19 + Tailwind + shadcn/ui)
 - [x] Phase 4 — Features
-  - [x] Course Management — CRUD, assign teachers, enroll students, self-enroll
-  - [x] Attendance — teacher marks sessions, student views percentage
+  - [x] Course Management — CRUD, assign/remove teachers, enroll/remove students, self-enroll, browse available
+  - [x] Attendance — teacher marks sessions (today + past), history list, single-record edit, student views %
   - [x] Grades — teacher entry per component, auto letter grade, student GPA report
   - [x] Announcements — admin CRUD, role-targeted broadcast, widget on all dashboards
   - [x] Timetable — CRUD API, admin table, teacher/student weekly grid
-- [ ] Phase 5 — Deploy (Docker + GitHub Actions + environment hardening)
+- [x] Phase 5 — Deploy (Railway for server + DB + Redis; production hardening complete)
+  - [x] Switched from Gmail SMTP to Resend HTTP API (Railway blocks SMTP ports)
+  - [x] Replaced `bcrypt` with `bcryptjs` (pure JS — no native binaries needed on Railway)
+  - [x] `app.set('trust proxy', 1)` for Railway reverse proxy (rate limiter IP detection)
+  - [x] `sameSite: 'none'` on refresh cookie for cross-origin production auth
+  - [x] CORS: trim `CLIENT_URL` whitespace and trailing slash
+  - [x] Redis TLS support via `REDIS_TLS=true` (Upstash on Railway)
+  - [x] Health check endpoint `/api/health`
 
 ---
 
