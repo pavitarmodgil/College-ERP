@@ -1,6 +1,7 @@
 import { useState, useEffect } from 'react'
 import { useNavigate } from 'react-router-dom'
 import Sidebar from '../../components/Sidebar'
+import CalendarView from '../../components/CalendarView'
 import api from '../../lib/api'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -17,6 +18,7 @@ export default function TeacherTimetablePage() {
   const [grouped, setGrouped] = useState({})
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
+  const [viewMode, setViewMode] = useState('week')
 
   const todayKey = JS_DAY_TO_KEY[new Date().getDay()] || null
 
@@ -104,8 +106,39 @@ export default function TeacherTimetablePage() {
           </div>
         </div>
 
+        {/* View toggle */}
+        <div className="flex items-center gap-2 bg-surface-container-low dark:bg-neutral-800 p-1 rounded-xl w-fit mb-6">
+          <button
+            onClick={() => setViewMode('week')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              viewMode === 'week'
+                ? 'bg-white dark:bg-neutral-700 shadow-sm text-primary'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">view_week</span>
+            Week View
+          </button>
+          <button
+            onClick={() => setViewMode('calendar')}
+            className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+              viewMode === 'calendar'
+                ? 'bg-white dark:bg-neutral-700 shadow-sm text-primary'
+                : 'text-on-surface-variant hover:text-on-surface'
+            }`}
+          >
+            <span className="material-symbols-outlined text-base">calendar_month</span>
+            Calendar View
+          </button>
+        </div>
+
+        {/* Calendar View */}
+        {viewMode === 'calendar' && (
+          <CalendarView entries={entries} />
+        )}
+
         {/* Weekly Grid */}
-        {isLoading ? (
+        {viewMode === 'week' && isLoading ? (
           <div className="flex items-center justify-center py-20 text-on-surface-variant">
             <span className="material-symbols-outlined animate-spin mr-2">progress_activity</span>
             Loading schedule…
@@ -219,8 +252,8 @@ export default function TeacherTimetablePage() {
           </div>
         )}
 
-        {/* Empty state */}
-        {!isLoading && !error && entries.length === 0 && (
+        {/* Empty state — week view only */}
+        {viewMode === 'week' && !isLoading && !error && entries.length === 0 && (
           <div className="mt-10 flex flex-col items-center justify-center py-16 text-on-surface-variant gap-3">
             <span className="material-symbols-outlined text-5xl opacity-30">calendar_month</span>
             <p className="font-medium">No timetable entries assigned to you yet.</p>

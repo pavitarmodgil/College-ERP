@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import Sidebar from '../../components/Sidebar'
+import CalendarView from '../../components/CalendarView'
 import api from '../../lib/api'
 
 const DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
@@ -56,9 +57,11 @@ export default function StudentTimetablePage() {
   const [entries, setEntries] = useState([])
   const [grouped, setGrouped] = useState({})
   const [insightsByCourse, setInsightsByCourse] = useState({})
+  const [assessments, setAssessments] = useState([])
   const [isLoading, setIsLoading] = useState(true)
   const [error, setError] = useState('')
   const [activeFilter, setActiveFilter] = useState('ALL')
+  const [viewMode, setViewMode] = useState('week') // 'week' | 'calendar'
 
   const todayKey = JS_DAY_TO_KEY[new Date().getDay()] || null
 
@@ -82,6 +85,11 @@ export default function StudentTimetablePage() {
         for (const c of res.data.courses) map[c.courseId] = c
         setInsightsByCourse(map)
       })
+      .catch(() => {})
+
+    // Assessments for the calendar markers
+    api.get('/assessments')
+      .then((res) => setAssessments(res.data.assessments || []))
       .catch(() => {})
   }, [])
 
@@ -136,7 +144,45 @@ export default function StudentTimetablePage() {
           <div className="absolute bottom-[-10%] left-[-5%] w-56 h-56 bg-indigo-400/10 blur-[60px] rounded-full" />
         </section>
 
-        {/* Filter Pills */}
+        {/* View toggle */}
+        <div className="flex items-center justify-between mb-6 flex-wrap gap-3">
+          <div className="flex items-center gap-2 bg-surface-container-low dark:bg-neutral-800 p-1 rounded-xl">
+            <button
+              onClick={() => setViewMode('week')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                viewMode === 'week'
+                  ? 'bg-white dark:bg-neutral-700 shadow-sm text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">view_week</span>
+              Week View
+            </button>
+            <button
+              onClick={() => setViewMode('calendar')}
+              className={`flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-bold transition-all ${
+                viewMode === 'calendar'
+                  ? 'bg-white dark:bg-neutral-700 shadow-sm text-primary'
+                  : 'text-on-surface-variant hover:text-on-surface'
+              }`}
+            >
+              <span className="material-symbols-outlined text-base">calendar_month</span>
+              Calendar View
+            </button>
+          </div>
+        </div>
+
+        {/* Calendar View */}
+        {viewMode === 'calendar' && (
+          <CalendarView
+            entries={entries}
+            assessments={assessments}
+            insightsByCourse={insightsByCourse}
+          />
+        )}
+
+        {/* Week View — filter pills + grid + subject overview */}
+        {viewMode === 'week' && (<>
         <div className="flex items-center gap-2 mb-8 flex-wrap">
           <button
             onClick={() => setActiveFilter('ALL')}
@@ -332,6 +378,7 @@ export default function StudentTimetablePage() {
             </div>
           </section>
         )}
+        </>)}
       </main>
     </div>
   )
