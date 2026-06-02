@@ -7,6 +7,8 @@ const {
   createEntry,
   updateEntry,
   deleteEntry,
+  generateTimetable,
+  saveDraft,
 } = require('../controllers/timetableController')
 const { authGuard, requireRole } = require('../middleware/authGuard')
 
@@ -17,6 +19,8 @@ router.use(authGuard)
 router.get('/semesters', requireRole('ADMIN'), getSemesters)
 router.get('/insights', requireRole('STUDENT'), getInsights)
 router.get('/', getTimetable)
+router.post('/generate', requireRole('ADMIN'), generateTimetable)
+router.post('/bulk', requireRole('ADMIN'), saveDraft)
 router.post('/', requireRole('ADMIN'), createEntry)
 router.patch('/:id', requireRole('ADMIN'), updateEntry)
 router.delete('/:id', requireRole('ADMIN'), deleteEntry)

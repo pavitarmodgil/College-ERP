@@ -278,6 +278,196 @@ async function getInsights(req, res, next) {
   }
 }
 
+// ── Auto Timetable Generator ────────────────────────────────────────────────
+
+const GEN_DAYS = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
+
+// Fixed 1-hour time slots the generator distributes across.
+const GEN_SLOTS = [
+  { start: '08:00', end: '09:00' },
+  { start: '09:00', end: '10:00' },
+  { start: '10:00', end: '11:00' },
+  { start: '11:00', end: '12:00' },
+  { start: '14:00', end: '15:00' },
+  { start: '15:00', end: '16:00' },
+  { start: '16:00', end: '17:00' },
+]
+
+// POST /api/timetable/generate — Admin only
+// Runs the greedy scheduler and returns a draft (nothing is saved yet).
+// Body: { semester, requests: [{ courseId, teacherId, lecturesPerWeek, rooms }] }
+async function generateTimetable(req, res, next) {
+  try {
+    const { semester, requests } = req.body
+
+    if (!semester || !Array.isArray(requests) || requests.length === 0) {
+      return res.status(400).json({
+        error: 'semester and a non-empty requests array are required',
+      })
+    }
+    for (const r of requests) {
+      if (!r.courseId || !r.teacherId || !r.lecturesPerWeek) {
+        return res.status(400).json({ error: 'Each request needs courseId, teacherId and lecturesPerWeek' })
+      }
+      if (!Array.isArray(r.rooms) || r.rooms.length === 0) {
+        return res.status(400).json({ error: `Request for courseId ${r.courseId} needs at least one room` })
+      }
+    }
+
+    // Load existing entries for the semester — used for conflict checking.
+    const existing = await prisma.timetableEntry.findMany({
+      where: { semester },
+      select: { courseId: true, teacherId: true, room: true, dayOfWeek: true, startTime: true, endTime: true },
+    })
+
+    // Working set includes existing + new draft entries as we place them.
+    const placed = [...existing]
+    const draft = []
+    const warnings = []
+
+    const hasConflict = (teacherId, room, dayOfWeek, start, end, courseId) =>
+      placed.some(
+        (e) =>
+          e.dayOfWeek === dayOfWeek &&
+          timesOverlap(start, end, e.startTime, e.endTime) &&
+          (e.teacherId === teacherId || e.room === room || e.courseId === courseId)
+      )
+
+    for (const request of requests) {
+      const cId = parseInt(request.courseId)
+      const tId = parseInt(request.teacherId)
+      const needed = parseInt(request.lecturesPerWeek)
+      const rooms = request.rooms.map((r) => r.trim())
+
+      let assigned = 0
+      let dayRotation = 0 // rotate starting day to spread load across the week
+
+      while (assigned < needed) {
+        let foundThisLecture = false
+
+        for (let offset = 0; offset < GEN_DAYS.length; offset++) {
+          const day = GEN_DAYS[(dayRotation + offset) % GEN_DAYS.length]
+
+          // Never schedule the same course twice on the same day.
+          const courseAlreadyToday = placed.some((e) => e.courseId === cId && e.dayOfWeek === day)
+          if (courseAlreadyToday) continue
+
+          for (const slot of GEN_SLOTS) {
+            for (const room of rooms) {
+              if (!hasConflict(tId, room, day, slot.start, slot.end, cId)) {
+                const entry = {
+                  courseId: cId,
+                  teacherId: tId,
+                  dayOfWeek: day,
+                  startTime: slot.start,
+                  endTime: slot.end,
+                  room,
+                  semester,
+                }
+                draft.push(entry)
+                placed.push(entry)
+                assigned++
+                dayRotation = (GEN_DAYS.indexOf(day) + 1) % GEN_DAYS.length
+                foundThisLecture = true
+                break // rooms
+              }
+            }
+            if (foundThisLecture) break // slots
+          }
+          if (foundThisLecture) break // day offset
+        }
+
+        if (!foundThisLecture) {
+          warnings.push(
+            `Could only place ${assigned}/${needed} lectures for courseId ${cId} (teacherId ${tId}) — no free slot found`
+          )
+          break
+        }
+      }
+    }
+
+    // Enrich draft with course + teacher names for the preview table.
+    const courseIds = [...new Set(draft.map((e) => e.courseId))]
+    const teacherIds = [...new Set(draft.map((e) => e.teacherId))]
+
+    const [courses, teachers] = await Promise.all([
+      prisma.course.findMany({
+        where: { id: { in: courseIds } },
+        select: { id: true, name: true, code: true },
+      }),
+      prisma.user.findMany({
+        where: { id: { in: teacherIds } },
+        select: { id: true, email: true, teacherId: true, firstName: true, lastName: true },
+      }),
+    ])
+
+    const courseMap = Object.fromEntries(courses.map((c) => [c.id, c]))
+    const teacherMap = Object.fromEntries(teachers.map((t) => [t.id, t]))
+
+    const enriched = draft.map((e) => ({
+      ...e,
+      course: courseMap[e.courseId] || null,
+      teacher: teacherMap[e.teacherId] || null,
+    }))
+
+    res.json({ draft: enriched, count: enriched.length, warnings })
+  } catch (err) {
+    next(err)
+  }
+}
+
+// POST /api/timetable/bulk — Admin only
+// Saves a confirmed draft returned by /generate (no conflict re-check here;
+// UI can call /generate first, review, then POST the approved entries here).
+async function saveDraft(req, res, next) {
+  try {
+    const { entries } = req.body
+
+    if (!Array.isArray(entries) || entries.length === 0) {
+      return res.status(400).json({ error: 'entries array is required' })
+    }
+
+    // Run a final conflict check on each entry before committing.
+    for (const e of entries) {
+      const conflict = await findConflict({
+        teacherId: e.teacherId,
+        room: e.room,
+        dayOfWeek: e.dayOfWeek,
+        startTime: e.startTime,
+        endTime: e.endTime,
+        semester: e.semester,
+        courseId: e.courseId,
+      })
+      if (conflict) {
+        return res.status(409).json({
+          error: `Conflict detected: ${conflict} — ${e.course?.code || e.courseId} ${e.dayOfWeek} ${e.startTime}`,
+        })
+      }
+    }
+
+    const created = await prisma.$transaction(
+      entries.map((e) =>
+        prisma.timetableEntry.create({
+          data: {
+            courseId: parseInt(e.courseId),
+            teacherId: parseInt(e.teacherId),
+            dayOfWeek: e.dayOfWeek,
+            startTime: e.startTime,
+            endTime: e.endTime,
+            room: e.room.trim(),
+            semester: e.semester.trim(),
+          },
+          include: entryInclude,
+        })
+      )
+    )
+
+    res.status(201).json({ created, count: created.length })
+  } catch (err) {
+    next(err)
+  }
+}
+
 module.exports = {
   getTimetable,
   getSemesters,
@@ -285,4 +475,6 @@ module.exports = {
   createEntry,
   updateEntry,
   deleteEntry,
+  generateTimetable,
+  saveDraft,
 }
