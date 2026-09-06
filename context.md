@@ -268,13 +268,14 @@ All routes defined in `client/src/App.jsx`.
 - Attendance: `≥75%` SAFE · `65–74%` WARNING · `<65%` CRITICAL; `classesNeeded` solves `(attended+x)/(total+x) ≥ 0.75`
 - `gradeRisk = true` when the projected letter is `F` or `P` (below 40 marks) — this is the ERP's own "at risk" definition
 - When FINAL is missing, the projection assumes final = current average, and reports `marksNeededInFinal`
-- Pure helpers are unit-tested: `node --test server/lib/__tests__/`
+- Pure helpers are unit-tested (12 tests, all passing): `node --test "server/lib/__tests__/*.test.js"`
+  — the bare-directory form fails on Node 24; the glob is required
 
 ### Known technical debt
 
 - `server/controllers/courseController.js` and `server/controllers/announcementController.js` both instantiate `new PrismaClient()` directly instead of using the singleton at `server/lib/prisma.js`. This creates extra connection pools.
 - `express-session` is in `package.json` dependencies but is not used anywhere in the codebase.
-- **No `test` script in `package.json`.** `server/lib/__tests__/timetableInsights.test.js` says "run with `npm test`", but that script does not exist — the tests must be run as `node --test server/lib/__tests__/`.
+- **No `test` script in `package.json`.** `server/lib/__tests__/timetableInsights.test.js` says "run with `npm test`", but that script does not exist. Suggested fix: add `"test": "node --test \"server/lib/__tests__/*.test.js\""`.
 - `POST /api/timetable/bulk` re-checks conflicts in a loop of `await`s *before* the transaction, so a concurrent write between check and commit could still slip through. Low risk for single-admin use.
 
 ### Key file locations

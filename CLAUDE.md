@@ -488,5 +488,6 @@ The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` va
 | Change email content | `server/lib/mailer.js` |
 | Change rate limits | `server/middleware/rateLimiter.js` |
 | Change risk bands / grade weights | `server/lib/timetableInsights.js` — update `__tests__/timetableInsights.test.js` too |
+| Run the unit tests | `node --test "server/lib/__tests__/*.test.js"` (12 tests; no `npm test` script exists yet) |
 | Change the scheduler's slots or constraints | `server/controllers/timetableController.js` → `GEN_SLOTS` / `GEN_DAYS` / `hasConflict` |
 | Work on the ML module | `ai/` — see [`ai/README.md`](ai/README.md); do **not** modify ERP controllers for it |

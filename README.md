@@ -197,10 +197,10 @@ Full seed roster (18 users · 12 courses · 24 enrollments) is documented in [`C
 | Grade risk | Projected letter is `F` or `P` (below 40 marks) |
 | Marks needed in final | Minimum final score that holds the projected letter band |
 
-The pure helpers are unit-tested:
+The pure helpers are unit-tested (12 tests):
 
 ```bash
-node --test server/lib/__tests__/
+node --test "server/lib/__tests__/*.test.js"
 ```
 
 ---
@@ -345,7 +345,7 @@ npm run server     # Start API server only
 npm run client     # Start Vite dev server only
 npm start          # Production: API server
 
-node --test server/lib/__tests__/    # Unit tests (no npm test script yet)
+node --test "server/lib/__tests__/*.test.js"   # Unit tests (no npm test script yet)
 ```
 
 ---
