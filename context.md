@@ -243,7 +243,7 @@ All routes defined in `client/src/App.jsx`.
   - [x] UX fixes — name fields (firstName/lastName), login OTP preview removed, dashboard duplicate stats removed, sidebar profile card clickable nav
 - [x] Phase 5 — Deploy (Railway; production hardening complete)
 - [x] Phase 6 — Smart Timetable 2.0 (Assessment model, insights engine, auto-generator, calendar view)
-- [ ] Phase 7 — AI/ML Student Performance & At-Risk Prediction (**in progress**)
+- [x] Phase 7 — AI/ML Student Performance & At-Risk Prediction (notebook executed; see `ai/README.md`)
 
 ---
 
@@ -251,7 +251,14 @@ All routes defined in `client/src/App.jsx`.
 
 **Last updated:** 2026-09-06
 **Current branch:** `feat/ai-performance-prediction` (off `dev`)
-**Status:** Phases 0–6 complete and merged to `dev`. Phase 7 (AI/ML) starting — documentation laid down first, no ML code written yet.
+**Status:** Phases 0–7 complete. The ML notebook runs end to end on real data.
+
+### Phase 7 at a glance
+
+- Trained on **UCI Student Performance** (1,044 rows, CC BY 4.0), not the ERP — the ERP has 30 gradeable rows and **zero** at-risk students, so a classifier cannot be trained on it. The ERP data proves the extraction path and provides the real-student demo.
+- Selected models: **Logistic Regression** for at-risk (recall 1.00 — catches all 20 test positives) and **Random Forest Regressor** for final marks (MAE 4.27, R² 0.880).
+- Both beat the ERP's existing `predictFinalGrade` rule on the same test set (rule: recall 0.90, R² 0.821).
+- Nothing in `server/` or `client/` was modified for this.
 
 ### What's working end-to-end
 

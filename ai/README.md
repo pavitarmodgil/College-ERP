@@ -1,10 +1,10 @@
 # AI/ML Module — Student Performance & At-Risk Prediction
 
-**Phase 7 of the University Management System.** Adds a machine-learning layer on top of the existing ERP's academic data.
+**Phase 7 of the University Management System.** A machine-learning layer built on the ERP's academic data, for Continuous Evaluation 1 of Artificial Intelligence & Machine Learning (24CSE0316).
 
-> **Status: documentation only.** This README is written *before* implementation so the design decisions — especially the leakage rules — are fixed in advance rather than rationalised afterwards. Nothing under `ai/` is implemented yet. Sections marked **PLANNED** describe intended behaviour; they are not claims about working code.
+**Status: implemented and executed.** The notebook runs end to end with no errors, on real data, and the saved outputs in it are from an actual run.
 
-The governing requirements are in [`IMPLEMENTATION_SPEC.md`](IMPLEMENTATION_SPEC.md). This README documents what was actually built and why it diverges where it does.
+The governing requirements are in [`IMPLEMENTATION_SPEC.md`](IMPLEMENTATION_SPEC.md). This README documents what was built and where it diverges, with reasons.
 
 ---
 
@@ -23,294 +23,297 @@ This is decision support for early intervention. It is **not** an authoritative 
 
 ---
 
-## 2. How it connects to the ERP
+## 2. Coverage of the CE notice
 
-```
-PostgreSQL (existing ERP)
-    │
-    │  read-only Prisma queries
-    ▼
-ai/scripts/export_student_academic_data.js
-    │
-    │  one row per student-course
-    ▼
-ai/data/raw/student_course_dataset.csv
-    │
-    ▼
-ai/notebooks/student_performance_at_risk.ipynb
-    │
-    ├── cleaning → EDA → feature engineering → selection → scaling
-    ├── train/test split
-    ├── classification (LogReg · Decision Tree · Random Forest)
-    └── regression (Linear · Random Forest Regressor)
-    │
-    ▼
-ai/models/  +  ai/reports/
-```
+The notice's examined syllabus stops at *"preparation of training and testing datasets."* It does **not** require model training or evaluation. Part A of the notebook covers the syllabus exactly; Part B goes beyond it to complete the project.
 
-**The ERP is not modified.** No new database, no new tables, no changes to existing controllers. The extraction script reuses `server/lib/prisma.js` and only reads.
-
-There is currently **no inference endpoint**. `GET /api/ai/...` is deliberately out of scope — see [§12](#12-future-work).
+| Syllabus item | Notebook section |
+|---|---|
+| Google Colab + NumPy, Pandas, Scikit-Learn, Matplotlib | 1 |
+| Data collection | 2 |
+| Data integration | 3 |
+| Data cleaning | 4 |
+| Handling missing values | 5 |
+| *(EDA / visualisation)* | 6 |
+| Data transformation | 7 |
+| Feature engineering | 8 |
+| Feature selection | 9 |
+| Feature extraction · data reduction | 10 |
+| Feature scaling — normalization **and** standardization | 11 |
+| Preparation of training and testing datasets | 12 |
+| — *beyond syllabus* — Classification | 13 |
+| — *beyond syllabus* — Regression | 14 |
+| — *beyond syllabus* — Model comparison | 15 |
+| — *beyond syllabus* — Baseline comparison vs the ERP's own rule | 16 |
+| — *beyond syllabus* — Feature importance | 17 |
+| — *beyond syllabus* — Predictions on real ERP students | 18 |
+| — *beyond syllabus* — Artifacts, limitations, conclusion | 19–21 |
 
 ---
 
-## 3. Relationship to the existing rule-based insights
-
-The ERP already predicts grades. `server/lib/timetableInsights.js` (`predictFinalGrade`) computes a weighted projection:
+## 3. How it connects to the ERP
 
 ```
-INTERNAL × 0.2  +  MID_TERM × 0.3  +  FINAL × 0.5
+PostgreSQL (existing ERP)        UCI Student Performance
+    │                                     │
+    │ read-only Prisma                    │ download + map
+    ▼                                     ▼
+export_student_academic_data.js   prepare_uci_dataset.py
+    │                                     │
+    └──────────────┬──────────────────────┘
+                   ▼   one canonical schema
+        ai/data/raw/*.csv
+                   ▼
+  ai/notebooks/student_performance_at_risk.ipynb
+                   ▼
+        ai/models/  (joblib + metadata)
 ```
 
-and flags `gradeRisk = true` when the projected letter is `F` or `P`.
+**The ERP is not modified.** No new database, no new tables, no changes to existing controllers or routes. The extraction script reuses `server/lib/prisma.js` and only reads.
 
-**This is a hand-written rule, not a learned model.** It matters here for three reasons:
-
-1. **It is the honest baseline.** Any ML model must be compared against it. "The model beats a weighted average" is a real result; "the model scored 0.9 R²" in isolation is not.
-2. **It defines "at risk" for this codebase.** The ML target reuses that definition rather than inventing a new one — see [§5](#5-prediction-target-and-the-at-risk-threshold).
-3. **It is a leakage trap.** `predictFinalGrade` consumes `FINAL` marks when present. Its outputs must therefore **never** be used as ML features. See [§6](#6-leakage-rules).
+There is no inference endpoint. `GET /api/ai/...` is deliberately out of scope — see [§11](#11-future-work).
 
 ---
 
-## 4. Dataset schema
+## 4. Data sources
+
+Both sources are **real**. No synthetic data is used anywhere.
+
+### Source 1 — the ERP (30 rows)
+
+`ai/scripts/export_student_academic_data.js` aggregates the live database to one row per student-course enrolment. Of 45 enrolments, 15 have no FINAL grade and are dropped, leaving 30.
+
+### Source 2 — UCI Student Performance (1,044 rows)
+
+> Cortez, P. (2008). *Student Performance* [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5TG7T — **CC BY 4.0**
+
+Real records from two Portuguese secondary schools, mapped onto the same schema by `ai/scripts/prepare_uci_dataset.py`.
+
+### Why a second source was necessary
+
+The ERP database contains:
+
+| | |
+|---|---|
+| Enrolments with a FINAL grade | **30** |
+| Students below the at-risk threshold | **0** |
+| FINAL marks range | 45–98 (27 of 30 are A+ or O) |
+
+**A binary classifier cannot be trained on a single class.** There are no failing students in the ERP to learn from, and 30 rows would not support a meaningful train/test split even if there were.
+
+The UCI data has a genuine, naturally imbalanced positive class — 100 at-risk students out of 1,044 (9.6%). It is used for training; the ERP data proves the extraction pipeline and provides the real-student demonstration in notebook §18.
+
+> This replaced an earlier plan to generate synthetic data. Real published data with real relationships is strictly better: the metrics mean something, and combining two sources demonstrates *data collection* and *data integration* authentically rather than by assertion.
+
+---
+
+## 5. Dataset schema
 
 Grain: **one row = one student enrolled in one course.**
 
-Not one row per attendance record. Not one row per grade component.
-
-| Column | Source | Type | Role |
+| Column | ERP source | UCI source | Role |
 |---|---|---|---|
-| `student_id` | `User.studentId` | string | identifier — excluded from features |
-| `course_code` | `Course.code` | string | identifier — excluded from features |
-| `department` | `Department.code` | categorical | feature |
-| `course_type` | `Course.type` | categorical | feature (MANDATORY/ELECTIVE) |
-| `credits` | `Course.credits` | int | feature |
-| `attendance_percentage` | aggregated `Attendance` | float 0–100 | feature |
-| `classes_held` | count of `Attendance` | int | feature (confidence in the % above) |
-| `internal_marks` | `Grade` where `component=INTERNAL` | float 0–100 | feature |
-| `midterm_marks` | `Grade` where `component=MID_TERM` | float 0–100 | feature |
-| `final_marks` | `Grade` where `component=FINAL` | float 0–100 | **regression target** |
-| `at_risk` | derived from `final_marks` | 0/1 | **classification target** |
+| `source` | `"ERP"` | `"UCI"` | provenance |
+| `student_id` | `User.studentId` | synthetic stable id | identifier — not a feature |
+| `course_code` | `Course.code` | `MAT101` / `POR101` | identifier — not a feature |
+| `department` | `Department.code` | `MAT` / `POR` | feature |
+| `course_type` | `Course.type` | `MANDATORY` | feature |
+| `credits` | `Course.credits` | `3` | dropped — near-constant |
+| `attendance_percentage` | `COUNT(present)/COUNT(*)` | `100 × (1 − absences/60)` | feature |
+| `classes_held` | count of `Attendance` | `60` | not a feature |
+| `internal_marks` | `Grade` `INTERNAL` | `G1 × 5` | feature |
+| `midterm_marks` | `Grade` `MID_TERM` | `G2 × 5` | feature |
+| `past_failures` | *not available* | `failures` | **dropped** — see below |
+| `study_time` | *not available* | `studytime` | **dropped** — see below |
+| `final_marks` | `Grade` `FINAL` | `G3 × 5` | **regression target** |
+| `at_risk` | derived | derived | **classification target** |
 
-`attendance_percentage` is computed as `COUNT(present=true) / COUNT(*) × 100` per enrollment. The aggregation happens in JavaScript, not SQL — PostgreSQL cannot `SUM(boolean)` through Prisma's `_sum`, which is the same constraint `attendanceController` and `timetableInsights` already work around.
+### Two scale alignments
 
-### What is deliberately *not* a feature
+- **Grades.** UCI uses the Portuguese 0–20 scale, the ERP uses 0–100. UCI grades are multiplied by 5.
+- **Attendance.** UCI records raw absence *counts*, not a percentage. Converting them assumes 60 sessions per course. This is an explicit modelling assumption, not a measurement, and is flagged in the notebook wherever the feature is used.
+
+### Engineered features
+
+| Feature | Definition | Why |
+|---|---|---|
+| `internal_midterm_average` | mean of internal and midterm | single summary of standing; smooths one bad paper |
+| `performance_trend` | `midterm − internal` | direction of travel — 40→60 and 80→60 are not the same student |
+| `attendance_band` | SAFE / WARNING / CRITICAL | applies the ERP's own 75% / 65% thresholds |
+
+### What is deliberately excluded
 
 | Excluded | Why |
 |---|---|
-| `Assessment` rows | **Carries no marks.** It is a scheduled item (title, dueDate, type). There is no score to aggregate, so the spec's `assessment_average` is not derivable from it. |
-| `letterGrade` | Derived from `final_marks` — direct leakage. |
-| Anything from `timetableInsights` | Consumes `FINAL` when present — see [§6](#6-leakage-rules). |
-| `email`, `firstName`, `lastName` | Personally identifying, and not academically meaningful. |
-| `TimetableEntry` (room, slot) | Available, but no plausible mechanism linking room assignment to performance. Adding it would inflate the feature count without justification. |
-
-> **Note on `assessment_average`.** The spec lists it as a preferred field. It is not implementable against this schema — `Assessment` has no marks column. Rather than fabricate it, the feature set uses `internal_marks` and `midterm_marks`, which are the real graded components. This is a documented, deliberate divergence from the spec.
+| `Assessment` rows | **Carries no marks.** It is a scheduled item (title, dueDate, type), so the spec's `assessment_average` is not derivable from it. |
+| `past_failures`, `study_time` | Missing for **100%** of ERP rows. They carry real signal (measured in §9, not assumed) but a model depending on them could not score a single real ERP student. |
+| `letterGrade`, GPA | Derived from `final_marks` — direct leakage. |
+| Anything from `timetableInsights` | Consumes `FINAL` when present. |
+| `email`, names | Personally identifying and not academically meaningful. |
 
 ---
 
-## 5. Prediction target and the at-risk threshold
+## 6. Prediction target and the at-risk threshold
 
-**Prediction point:** immediately before the FINAL component is graded. Everything the model sees — attendance, internal, midterm — exists at that moment.
+**Prediction point:** immediately before the FINAL component is graded.
 
 **Regression target:** `final_marks` (0–100).
 
-**Classification target:**
-
-```
-at_risk = 1  when final_marks < 40
-at_risk = 0  otherwise
-```
+**Classification target:** `at_risk = 1` when `final_marks < 40`.
 
 ### Why 40 and not 35
 
-The ERP's grade scale (`server/lib/gradeUtils.js`) makes `F` the only failing grade, at `< 35`. `P` (35–39) is a bare pass. A naive reading would put the threshold at 35.
-
-But the ERP's *own* definition of academic risk is broader. `timetableInsights.js` sets:
+The ERP's grade scale (`server/lib/gradeUtils.js`) makes `F` the only failing grade at `< 35`; `P` (35–39) is a bare pass. But the ERP's *own* definition of academic risk is broader — `timetableInsights.js` sets:
 
 ```js
 const gradeRisk = ['F', 'P'].includes(prediction.projectedGrade)
 ```
 
-That is, the application already treats a bare pass as a student who needs attention. `P` is the boundary between 35 and 40, so `final_marks < 40` reproduces the existing domain rule exactly.
-
-This also happens to match the spec's suggested threshold — but it is adopted because the codebase defines it that way, not because the spec suggested it.
+The application already treats a bare pass as a student needing attention. `P` ends at 39, so `final_marks < 40` reproduces the existing domain rule exactly. The threshold comes from the codebase, not from convenience.
 
 ---
 
-## 6. Leakage rules
+## 7. Leakage rules
 
-Non-negotiable. Every one of these is a way to accidentally score well and learn nothing.
+Every one of these is a way to score well and learn nothing.
 
 | Rule | Rationale |
 |---|---|
 | `final_marks` is never an input feature | It is the regression target. |
-| `at_risk` is never an input feature | It is derived from the target. |
+| `at_risk` is never an input feature | Derived from the target. |
 | `letterGrade` is never a feature | Computed from `final_marks`. |
 | No output of `predictFinalGrade` is a feature | It reads `FINAL` when present. |
-| GPA is never a feature | `gradeUtils` computes GPA from the FINAL component only. |
-| Scalers/encoders are fit on **training data only** | Fitting on the full set leaks test-set distribution into training. |
-| Any resampling (e.g. SMOTE) is applied **after** the split, to training folds only | Resampling before splitting puts synthetic copies of test rows into training. |
+| GPA is never a feature | Computed from the FINAL component only. |
+| Imputers, scalers and encoders are fit on **training folds only** | Enforced structurally by scikit-learn `Pipeline` / `ColumnTransformer`, not by remembering. |
 
-**Rows with no FINAL grade are excluded from training,** not imputed. A missing final is missing *outcome*, not a missing feature — imputing it would mean inventing the label. Seed student STU007 (`incomplete.grades@uni.com`) is exactly this case and is correctly dropped.
-
----
-
-## 7. Dataset size — the honest problem
-
-**PLANNED — exact counts come from the extraction script.**
-
-The current ERP database is seeded demo data, not an institutional record. Scale:
-
-| Quantity | Count |
-|---|---|
-| Enrollments (upper bound on rows) | 24 |
-| Grade entries across all components | 69 |
-| Enrollments with a FINAL grade (usable rows) | roughly 20 |
-
-**About twenty rows is not a machine learning dataset.** A 20% test split leaves four test rows. Any metric computed on four rows is noise — a single row flipping moves accuracy by 25 percentage points.
-
-So the plan is:
-
-1. **Run the extraction against the real ERP anyway.** It proves the ERP→dataset path works, and it produces the schema everything else conforms to.
-2. **Generate a labelled synthetic development dataset** for actual model training, via `ai/scripts/generate_demo_dataset.py` — same schema, fixed random seed, several hundred to a few thousand rows.
-
-### Rules for the synthetic data
-
-- Same columns and dtypes as the ERP export, so both flow through one pipeline.
-- Deterministic — fixed seed, regenerable, identical every run.
-- Relationships are *plausible*, not copied: attendance and prior components correlate with the final, with realistic noise.
-- Every artifact derived from it is labelled `SYNTHETIC`.
-- **Never inserted into the ERP database.** Not to inflate counts, not for demos, not at all.
-- **Metrics from synthetic data are never described as real-world ERP performance.** They demonstrate that the pipeline is correct, nothing more.
-
-The notebook states which dataset produced every number it reports.
+**Rows with no FINAL grade are excluded, not imputed.** A missing final is a missing *outcome*, not a missing feature — imputing it would mean inventing the label.
 
 ---
 
-## 8. Pipeline stages
-
-**PLANNED.**
+## 8. Pipeline
 
 | Stage | What happens |
 |---|---|
-| Cleaning | Duplicate rows; attendance outside 0–100; marks outside 0–100; malformed department/course codes; rows with no FINAL dropped (see §6) |
-| Missing values | Numeric components median-imputed **inside** the pipeline so imputation statistics come from training folds only |
-| Feature engineering | `internal_midterm_average`; `performance_trend` (midterm − internal); attendance banded to the ERP's own SAFE/WARNING/CRITICAL thresholds |
-| Feature selection | Correlation inspection for regression, mutual information for classification, cross-checked against tree feature importance. **No PCA** — with roughly ten interpretable features it would destroy interpretability for no gain, and the viva depends on explaining which features matter |
-| Scaling | `StandardScaler` inside a `Pipeline`, applied for Logistic Regression and Linear Regression. **Not** applied to tree models — they are scale-invariant, and pretending otherwise misrepresents why scaling exists |
-| Split | `train_test_split(test_size=0.2, random_state=42, stratify=y)` for classification; unstratified for regression |
+| Cleaning | exact duplicates; duplicate identity keys; marks outside 0–100; attendance outside 0–100; rows with no FINAL dropped |
+| Missing values | median (numeric) / most-frequent (categorical) imputation **inside** the pipeline |
+| Transformation | one-hot encoding for `department`, `course_type`, `attendance_band` — nominal categories, so label-encoding would invent a false ordering |
+| Feature engineering | the three features in §5 |
+| Feature selection | Pearson correlation + mutual information + `SelectKBest` |
+| Feature extraction | **PCA is demonstrated but not used in the final model** — see below |
+| Scaling | `StandardScaler` for linear models; **trees are not scaled**, because splits are invariant to monotonic rescaling |
+| Split | `train_test_split(test_size=0.2, random_state=42, stratify=y)` → 859 train / 215 test |
 
-Preprocessing lives in scikit-learn `Pipeline` / `ColumnTransformer` objects, not loose notebook cells, so that fitting on training data only is structurally enforced rather than remembered.
+### On PCA
 
----
+The notice lists *data reduction* and *feature extraction* as syllabus items, so PCA is implemented and analysed in §10 — explained variance, cumulative variance, and a 2-component projection showing the at-risk students occupying a distinct region.
 
-## 9. Models
+It is **not** used in the final pipeline. With only five numeric features there is nothing meaningful to compress, and a principal component is a blend of all five inputs — "PC1 is high" cannot be explained to a student, whereas "attendance is 58% and the midterm dropped 20 marks" can. For a system whose purpose is prompting human intervention, an actionable explanation beats a marginal accuracy gain.
 
-**PLANNED.**
-
-**Classification** — Logistic Regression (baseline, interpretable coefficients) · Decision Tree (interpretable non-linearity) · Random Forest (ensemble).
-
-**Regression** — Linear Regression (baseline) · Random Forest Regressor.
-
-Class imbalance is expected: most students pass. Response is `class_weight='balanced'` on compatible models, stratified splitting, and evaluation on recall/F1/confusion matrix rather than accuracy.
-
-### Metrics, and which one decides
-
-Classification: accuracy, precision, **recall**, F1, confusion matrix.
-Regression: MAE, MSE, RMSE, R².
-
-**Model selection is on recall for the at-risk class, not accuracy.** The two error types are not symmetric:
-
-- **False negative** — a genuinely at-risk student is marked safe, receives no intervention, and fails. The harm is real and lands on the student.
-- **False positive** — a safe student is flagged, a teacher reviews the case, nothing is wrong. The cost is a few minutes of attention.
-
-Optimising accuracy on an imbalanced set rewards predicting "not at risk" for everyone. That model would be accurate and useless.
+Knowing when *not* to apply a technique is part of using it correctly.
 
 ---
 
-## 10. Reproducibility
+## 9. Models and results
 
-**PLANNED.**
+Trained on 859 rows, evaluated on a held-out, stratified 215-row test set.
 
-```bash
-# 1. Export from the ERP (requires DATABASE_URL in .env)
-node ai/scripts/export_student_academic_data.js
+### Classification — at-risk detection
 
-# 2. Generate the synthetic development dataset
-python ai/scripts/generate_demo_dataset.py
+| Model | Accuracy | Precision | **Recall** | F1 | ROC-AUC |
+|---|---|---|---|---|---|
+| *ERP rule (baseline)* | 0.953 | 0.692 | 0.900 | 0.783 | — |
+| **Logistic Regression** | 0.921 | 0.541 | **1.000** | 0.702 | 0.988 |
+| Decision Tree | 0.926 | 0.562 | 0.900 | 0.692 | 0.932 |
+| Random Forest | 0.963 | 0.750 | 0.900 | 0.818 | 0.983 |
 
-# 3. Open the notebook
-#    Locally:  jupyter notebook ai/notebooks/student_performance_at_risk.ipynb
-#    Colab:    upload the notebook + the CSV from ai/data/
+**Selected: Logistic Regression** — the only model that identifies **every** at-risk student in the test set (20/20). Random Forest has better accuracy and F1, but misses two.
+
+Selection is on **recall**, not accuracy, because the errors are asymmetric: a false negative means a struggling student gets no support and fails; a false positive means a teacher spends a few minutes checking on someone who is fine. With ~9% positives, a model predicting "safe" for everyone would score ~91% accuracy and be useless.
+
+### Regression — final marks prediction
+
+| Model | MAE | MSE | RMSE | R² |
+|---|---|---|---|---|
+| *ERP rule (baseline)* | 4.909 | 62.661 | 7.916 | 0.821 |
+| Linear Regression | 4.360 | 47.812 | 6.915 | 0.863 |
+| **Random Forest Regressor** | **4.274** | **41.925** | **6.475** | **0.880** |
+
+**Selected: Random Forest Regressor** — best on every metric.
+
+### Does ML actually beat the existing rule?
+
+Yes, and the notebook demonstrates it rather than assuming it (§16). The ERP already predicts grades via `timetableInsights.predictFinalGrade`. With no FINAL entered, its weights reduce to a fixed linear rule:
+
+```
+projected = 0.2·I + 0.3·M + 0.5·((I + M)/2)  =  0.45·I + 0.55·M
 ```
 
-`random_state=42` throughout. Same input, same output.
+It ignores attendance entirely. Evaluated on the **same test set**:
+
+- Regression: RMSE improves 7.92 → 6.48, R² 0.821 → 0.880
+- Classification: the rule misses **2** at-risk students; Logistic Regression misses **0**
+
+That is the concrete justification for using ML over the existing hand-written rule.
+
+---
+
+## 10. Reproducing this
+
+```bash
+# 1. Export from the ERP (needs DATABASE_URL in .env and Postgres running)
+node ai/scripts/export_student_academic_data.js
+
+# 2. Download + map the UCI dataset
+python ai/scripts/prepare_uci_dataset.py
+
+# 3. Run the notebook
+jupyter notebook ai/notebooks/student_performance_at_risk.ipynb
+```
+
+**In Google Colab:** upload the notebook and `Runtime → Run all`. The UCI dataset downloads automatically, so it runs end to end with no setup. The ERP CSV is optional — without it the notebook continues on UCI data alone and says so.
+
+Requires `numpy pandas scikit-learn matplotlib joblib`. `random_state=42` throughout.
 
 ### Where things land
 
 | Path | Contents | In git? |
 |---|---|---|
-| `ai/data/raw/` | Extracted + generated CSVs | No — regenerate via the scripts |
-| `ai/data/processed/` | Cleaned/engineered intermediates | No |
-| `ai/models/` | `joblib` model + preprocessor + feature metadata | No — regenerate from the notebook |
-| `ai/reports/` | Figures and metric tables for the PPT | Yes |
-| `ai/notebooks/` | The notebook, outputs committed | Yes |
+| `ai/data/raw/` | `erp_student_course.csv`, `uci_student_course.csv` | No — regenerate via the scripts |
+| `ai/data/processed/` | intermediates | No |
+| `ai/models/` | `joblib` pipelines + `model_metadata.json` | No — regenerate from the notebook |
+| `ai/reports/` | figures for the PPT | Yes |
+| `ai/notebooks/` | the notebook, outputs committed | Yes |
 
-Data and model binaries are gitignored. The notebook and scripts that produce them are committed, which is what makes the work reproducible.
+Data and model binaries are gitignored; the scripts and notebook that produce them are committed, which is what makes this reproducible. The ERP export also contains real student records and must not reach source control.
 
-**No secrets in this directory.** The extraction script reads `DATABASE_URL` from the existing `.env` at runtime. Connection strings are never written into CSVs, notebooks, or committed output.
+**No secrets in this directory.** The extraction script reads `DATABASE_URL` from the existing `.env` at runtime; connection strings are never written into CSVs, notebooks or committed output.
 
 ---
 
 ## 11. Limitations
 
-State these plainly in the viva rather than being caught by them.
-
-- **Dataset size.** The real ERP yields roughly 20 usable rows. Model metrics come from synthetic data.
-- **Synthetic data cannot validate real-world accuracy.** It shows the pipeline is correct. It says nothing about how the model would perform on real students, because the relationships in it were designed, not observed.
-- **No temporal validation.** One cohort, one semester. No evidence the model transfers to a future intake.
-- **Feature importance is association, not causation.** High attendance is *associated with* better predicted outcomes. The model cannot show that attending more classes *causes* better marks — attendance may proxy for motivation, health, or circumstances the ERP does not record.
-- **Bias risk.** `department` is a feature. If departments differ systematically in grading, the model will learn that and apply it to individuals. Not audited.
-- **Decision support only.** Predictions must never be presented to students as grades, nor used as the sole basis for an academic decision.
+- **The models are not trained on this university's data.** The ERP has 30 gradeable rows and zero at-risk students, so training on it is impossible. The reported metrics come from Portuguese secondary-school data and **should not be read as expected accuracy for this institution.**
+- **The attendance mapping is an assumption.** UCI stores absence counts; converting to a percentage assumed 60 sessions per course. Mark-based features are unaffected; the attendance feature is not.
+- **Association, not causation.** Feature importance shows what the model keys on. Attendance may proxy for motivation, health, or circumstances the ERP never records.
+- **Bias risk is real and unaudited.** `department` is a feature; if departments differ systematically in grading severity the model learns that and applies it to individuals.
+- **No temporal validation.** One snapshot, one cohort. No evidence of transfer to a future intake.
+- **Decision support only.** A prediction is a prompt for a human to look closer — never a grade, never the sole basis for an academic decision.
 
 ---
 
 ## 12. Future work
 
-Explicitly **not** implemented, and out of scope for this CE:
+Deliberately **not** implemented, to keep this the size one student can defend:
 
 - Attendance prediction
 - Course recommendation
 - Automated intervention recommendations
-- An inference endpoint (`GET /api/ai/student/:id/prediction`)
+- A serving endpoint (`GET /api/ai/student/:id/prediction`)
 - A frontend AI dashboard
-- Richer historical data across multiple cohorts
-- Deep learning, LLM/chatbot features, computer vision
-
-The ML pipeline and its reproducibility are the deliverable. Adding a serving layer would increase surface area without demonstrating anything the notebook does not already show.
+- Retraining on real institutional data once enough terms have accumulated — the single change that would most improve this system
 
 ---
 
-## 13. CE requirement coverage
+### Reference
 
-Tracked against the syllabus scope. **PLANNED** until the notebook exists.
-
-| Requirement | Where it will be demonstrated |
-|---|---|
-| NumPy | Numeric ops throughout |
-| Pandas | Loading, cleaning, aggregation |
-| Scikit-learn | Pipelines, models, metrics |
-| Matplotlib | EDA + model comparison figures |
-| Data collection / integration | `export_student_academic_data.js` |
-| Data cleaning | Notebook §5 |
-| Missing values | Pipeline imputation |
-| Data transformation | Encoding + scaling |
-| Feature engineering | Notebook §6 |
-| Feature selection / extraction | Notebook §7 |
-| Feature scaling | `StandardScaler` |
-| Training / testing datasets | Stratified split |
-| Classification | LogReg · Decision Tree · Random Forest |
-| Regression | Linear · Random Forest Regressor |
-| Evaluation | Metrics + confusion matrix + comparison table |
-| Documentation | This file |
-| Reproducible execution | Fixed seeds + regeneration scripts |
+Cortez, P. (2008). *Student Performance* [Dataset]. UCI Machine Learning Repository. https://doi.org/10.24432/C5TG7T — CC BY 4.0

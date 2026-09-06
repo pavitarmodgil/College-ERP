@@ -472,7 +472,13 @@ The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` va
   - [x] Auto Timetable Generator — greedy scheduler (`/generate` draft → `/bulk` commit) + admin review page
   - [x] `CalendarView` shared component + calendar/grid toggle on student and teacher timetables
   - [x] `AcademicCommandCenter` + `UpcomingAssessmentsWidget` on the student dashboard
-- [ ] Phase 7 — AI/ML Student Performance & At-Risk Prediction (**in progress** — see [`ai/README.md`](ai/README.md))
+- [x] Phase 7 — AI/ML Student Performance & At-Risk Prediction (see [`ai/README.md`](ai/README.md))
+  - [x] `ai/scripts/export_student_academic_data.js` — read-only ERP → CSV at student-course grain
+  - [x] `ai/scripts/prepare_uci_dataset.py` — UCI Student Performance (CC BY 4.0) mapped to the same schema
+  - [x] `ai/notebooks/student_performance_at_risk.ipynb` — 63 cells, executed end to end
+  - [x] Classification (LogReg · Decision Tree · Random Forest) + regression (Linear · RF Regressor)
+  - [x] Benchmarked against the ERP's own `predictFinalGrade` rule on the same test set — ML wins
+  - [x] 12 figures exported to `ai/reports/` for the CE presentation
 
 ---
 
