@@ -224,6 +224,18 @@ Every figure is written to `ai/reports/` when the notebook runs from the repo ro
 
 ---
 
+### CE-2 submission files (`ai/submission/`)
+
+| File | What it is |
+|---|---|
+| `AIML_CE2_Presentation.pptx` | 18-slide deck on the Chitkara template, with speaker notes |
+| `AIML_CE2_Project_Report.docx` | ~62-page report in the department's format (front matter, 8 chapters, full source code appendix) |
+| `figures/` | methodology workflow and system architecture diagrams used in the report |
+
+Names, roll numbers and the guide's name are left as the template's placeholders — fill them in before printing. After editing the report in Word, right-click the table of contents → *Update Field*.
+
+---
+
 ## 8. Limitations
 
 - **Not trained on this university's data** — the ERP has no at-risk students; the metrics are not expected accuracy for this institution.
