@@ -478,7 +478,13 @@ The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` va
   - [x] `ai/notebooks/student_performance_at_risk.ipynb` — 63 cells, executed end to end
   - [x] Classification (LogReg · Decision Tree · Random Forest) + regression (Linear · RF Regressor)
   - [x] Benchmarked against the ERP's own `predictFinalGrade` rule on the same test set — ML wins
-  - [x] 12 figures exported to `ai/reports/` for the CE presentation
+  - [x] 12 figures exported to `ai/reports/` for the CE presentation (CE-1 state preserved at git tag `ce1-submission`)
+- [x] Phase 7b — CE-2 final implementation (branch `feat/ai-ce2`)
+  - [x] Third dataset: `ai/scripts/prepare_oulad_dataset.py` — Open University OULAD (CC BY 4.0), 4,959 rows → 6,033 total
+  - [x] Notebook extended to 98 cells / 26 sections: KNN · Naive Bayes · SVM · Polynomial Regression · 5-fold CV · bias-variance curves · GridSearchCV · K-Means / hierarchical / DBSCAN · fairness audit
+  - [x] Selection by cross-validated F2; selected Random Forest (tuned) — recall 0.865 vs ERP rule 0.316
+  - [x] 21 figures in `ai/reports/`, written by the notebook's `show()` helper; `ai/requirements.txt` added
+  - [ ] CE-2 PPT (Chitkara template) and spiral-bound project report
 
 ---
 

@@ -244,20 +244,22 @@ All routes defined in `client/src/App.jsx`.
 - [x] Phase 5 — Deploy (Railway; production hardening complete)
 - [x] Phase 6 — Smart Timetable 2.0 (Assessment model, insights engine, auto-generator, calendar view)
 - [x] Phase 7 — AI/ML Student Performance & At-Risk Prediction (notebook executed; see `ai/README.md`)
+- [x] Phase 7b — CE-2 implementation (third dataset OULAD, full CE-2 syllabus coverage; PPT + report pending)
 
 ---
 
 ## Current State
 
-**Last updated:** 2026-09-06
-**Current branch:** `feat/ai-performance-prediction` (off `dev`)
-**Status:** Phases 0–7 complete. The ML notebook runs end to end on real data.
+**Last updated:** 2026-11-17
+**Current branch:** `feat/ai-ce2` (off `feat/ai-performance-prediction`; CE-1 state at tag `ce1-submission`)
+**Status:** Phases 0–7 complete; CE-2 notebook implementation complete. PPT and report not started. CE-2 evaluation 25 Nov – 3 Dec 2026.
 
-### Phase 7 at a glance
+### Phase 7 / CE-2 at a glance
 
-- Trained on **UCI Student Performance** (1,044 rows, CC BY 4.0), not the ERP — the ERP has 30 gradeable rows and **zero** at-risk students, so a classifier cannot be trained on it. The ERP data proves the extraction path and provides the real-student demo.
-- Selected models: **Logistic Regression** for at-risk (recall 1.00 — catches all 20 test positives) and **Random Forest Regressor** for final marks (MAE 4.27, R² 0.880).
-- Both beat the ERP's existing `predictFinalGrade` rule on the same test set (rule: recall 0.90, R² 0.821).
+- Trained on **UCI Student Performance** (1,044 rows) + **OULAD** (Open University, 4,959 rows, added for CE-2 at the professor's request) — 6,033 rows total. The ERP has 30 gradeable rows and **zero** at-risk students, so it is used for the real-student demo only.
+- OULAD makes the task harder and more realistic: its exam is far less predictable from coursework (corr 0.48 vs UCI 0.91), so CE-2 metrics are lower than CE-1 (R² 0.88 → 0.53). This is expected and explained in the notebook.
+- Six classifiers + three regressors, 5-fold CV, bias-variance curves, GridSearchCV, K-Means/hierarchical/DBSCAN clustering, fairness audit.
+- Selected: **Random Forest (tuned)** for at-risk (test recall 0.865, 18 of 133 missed; ERP rule misses 91) and **Random Forest Regressor (tuned)** (MAE 10.97, R² 0.529). Selection metric is cross-validated **F2**.
 - Nothing in `server/` or `client/` was modified for this.
 
 ### What's working end-to-end
