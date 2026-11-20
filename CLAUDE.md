@@ -54,7 +54,7 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │   ├── routes/                    7 files, one per resource; thin — just wires paths to controllers
 │   ├── middleware/
 │   │   ├── authGuard.js           JWT verification → req.user; requireRole() factory
-│   │   ├── rateLimiter.js         loginLimiter (5/15min/IP), otpLimiter (3/hour)
+│   │   ├── rateLimiter.js         loginLimiter (5 failed/15min/IP), otpLimiter (10 failed/hour/IP)
 │   │   └── errorHandler.js        Centralized error formatter — logs stack + responds {error}
 │   └── lib/
 │       ├── prisma.js              Singleton PrismaClient export
@@ -118,6 +118,8 @@ POST /api/auth/login
   7. Return { maskedEmail, lookupEmail, mustResetPassword }
      NOTE: OTP is always sent. mustResetPassword is a flag in the response.
      The frontend redirects to /reset-password after OTP verify if true.
+     If the email can't be sent, the OTP is deleted and the API returns 502.
+     OTPs are printed to the console ONLY when NODE_ENV=development.
 
 POST /api/auth/verify-otp
   1. GET redis:otp:{email}
@@ -188,7 +190,7 @@ POST /api/auth/logout
 | POST | `/verify-otp` | PUBLIC | OTP → JWT access token + refresh cookie |
 | POST | `/refresh` | PUBLIC (cookie) | New access token from refresh cookie |
 | POST | `/logout` | AUTH | Clear refresh cookie |
-| POST | `/reset-password` | PUBLIC | First-login password reset (takes email + newPassword in body) |
+| POST | `/reset-password` | AUTH | Change the **caller's own** password (target = JWT `id`; body email ignored). `mustResetPassword` users send `newPassword`; everyone else also sends `currentPassword` |
 | GET | `/me` | AUTH | Returns decoded JWT payload |
 
 ### Users · `/api/users` — ADMIN only
@@ -263,7 +265,7 @@ All routes defined in `client/src/App.jsx` — **edit only this file when adding
 | Path | Role | Component |
 |---|---|---|
 | `/` | PUBLIC | LoginPage |
-| `/reset-password` | PUBLIC | ResetPasswordPage |
+| `/reset-password` | SIGNED-IN (redirects to `/` when signed out) | ResetPasswordPage |
 | `/admin` | ADMIN | AdminDashboard |
 | `/admin/users` | ADMIN | UsersPage |
 | `/admin/users/:id/profile` | ADMIN | StudentProfilePage |
@@ -302,6 +304,9 @@ npm run server
 # Client only
 npm run client
 
+# Tests (unit + API/authorization tests; no DB, Redis or network needed)
+npm test
+
 # Prisma
 npx prisma migrate dev --name <migration-name>   # create + apply migration
 npx prisma studio                                 # visual DB browser at localhost:5555
@@ -319,6 +324,7 @@ REDIS_PORT              Redis port (6379 locally, Upstash port in prod)
 REDIS_PASSWORD          Redis auth password (blank locally; required for Upstash)
 REDIS_TLS               Set to "true" for Upstash/production TLS; omit for local
 RESEND_API_KEY          Resend API key — used for OTP and password-reset emails
+MAIL_FROM               Sender on a Resend-verified domain (unset = sandbox sender, owner-only delivery)
 HCAPTCHA_SECRET         hCaptcha secret key (server-side verification)
 CLIENT_URL              Frontend origin for CORS (http://localhost:5173 locally)
 API_PORT                4000
