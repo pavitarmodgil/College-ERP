@@ -31,8 +31,10 @@ api.interceptors.response.use(
   async (error) => {
     const originalRequest = error.config
 
-    // Skip refresh logic for auth endpoints — 401 there means wrong credentials, not expired token
-    const isAuthEndpoint = originalRequest.url?.includes('/auth/')
+    // Skip refresh logic for the credential endpoints — a 401 there means wrong
+    // credentials, not an expired token. Authenticated /auth/* routes such as
+    // /auth/reset-password still get the normal refresh-and-retry.
+    const isAuthEndpoint = /\/auth\/(login|verify-otp|refresh|logout)$/.test(originalRequest.url || '')
     if (error.response?.status === 401 && !originalRequest._retry && !isAuthEndpoint) {
       if (isRefreshing) {
         return new Promise((resolve, reject) => {

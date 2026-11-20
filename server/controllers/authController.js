@@ -3,7 +3,12 @@ const jwt = require('jsonwebtoken')
 const crypto = require('crypto')
 const prisma = require('../lib/prisma')
 const redis = require('../lib/redis')
-const { sendOTPEmail } = require('../lib/mailer')
+const { sendOtpEmail } = require('../lib/mailer')
+
+// bcrypt only hashes the first 72 bytes — longer passwords would be silently
+// truncated, so cap the length instead of pretending the tail matters.
+const PASSWORD_MIN = 8
+const PASSWORD_MAX = 72
 
 // Helper: detect identifier type and find user
 async function findUserByIdentifier(identifier) {
@@ -45,6 +50,9 @@ async function login(req, res, next) {
     if (!identifier || !password || !captchaToken) {
       return res.status(400).json({ error: 'identifier, password and captchaToken are required' })
     }
+    if (typeof identifier !== 'string' || typeof password !== 'string' || typeof captchaToken !== 'string') {
+      return res.status(400).json({ error: 'identifier, password and captchaToken must be strings' })
+    }
 
     // 1. Verify hCaptcha (skip in development with bypass token)
     const isDevBypass = process.env.NODE_ENV === 'development' && captchaToken === 'dev-bypass'
@@ -76,8 +84,14 @@ async function login(req, res, next) {
     const otp = crypto.randomInt(100000, 999999).toString()
     await redis.set(`otp:${user.email}`, otp, 'EX', 300)
 
-    // 5. Email the OTP
-    await sendOTPEmail(user.email, otp)
+    // 5. Email the OTP. If delivery fails, discard the code so a stale OTP
+    // can't be used, and surface the failure (502) instead of claiming success.
+    try {
+      await sendOtpEmail(user.email, otp)
+    } catch (mailErr) {
+      await redis.del(`otp:${user.email}`)
+      throw mailErr
+    }
 
     // 6. Return only what's needed — never return the user object directly
     // lookupEmail is the real email (needed for OTP verify when user logged in with STU/TCH id)
@@ -179,31 +193,57 @@ async function logout(req, res) {
   res.json({ message: 'Logged out' })
 }
 
-// POST /auth/reset-password
-// For mustResetPassword users — forces new password before full access
+// POST /auth/reset-password   (authGuard — the caller must be logged in)
+// Changes the CALLER's own password. The target account always comes from the
+// signed token (req.user.id); any email in the body is ignored.
+//   - mustResetPassword users (first login / admin reset): newPassword only.
+//     They already proved identity with password + OTP to get the token.
+//   - everyone else: must also supply currentPassword.
 async function resetPassword(req, res, next) {
   try {
-    const { email, newPassword } = req.body
+    const { newPassword, currentPassword } = req.body
 
-    if (!email || !newPassword) {
-      return res.status(400).json({ error: 'email and newPassword are required' })
+    if (typeof newPassword !== 'string' || newPassword.length < PASSWORD_MIN) {
+      return res.status(400).json({ error: `Password must be at least ${PASSWORD_MIN} characters` })
+    }
+    if (newPassword.length > PASSWORD_MAX) {
+      return res.status(400).json({ error: `Password must be at most ${PASSWORD_MAX} characters` })
     }
 
-    if (newPassword.length < 8) {
-      return res.status(400).json({ error: 'Password must be at least 8 characters' })
+    const user = await prisma.user.findUnique({
+      where: { id: req.user.id },
+      select: { id: true, password: true, isActive: true, mustResetPassword: true },
+    })
+    if (!user || !user.isActive) {
+      return res.status(403).json({ error: 'Account is not active' })
+    }
+
+    if (!user.mustResetPassword) {
+      if (typeof currentPassword !== 'string' || currentPassword.length === 0) {
+        return res.status(400).json({ error: 'currentPassword is required' })
+      }
+      const currentMatches = await bcrypt.compare(currentPassword, user.password)
+      if (!currentMatches) {
+        // 403, not 401: a 401 would make the client think its token expired
+        return res.status(403).json({ error: 'Current password is incorrect' })
+      }
+    }
+
+    if (await bcrypt.compare(newPassword, user.password)) {
+      return res.status(400).json({ error: 'New password must be different from the current one' })
     }
 
     const hashed = await bcrypt.hash(newPassword, 12)
 
     await prisma.user.update({
-      where: { email },
+      where: { id: user.id },
       data: {
         password: hashed,
         mustResetPassword: false,
       },
     })
 
-    res.json({ message: 'Password updated. Please log in again.' })
+    res.json({ message: 'Password updated.' })
   } catch (err) {
     next(err)
   }
