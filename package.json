@@ -7,7 +7,8 @@
     "server": "node server/index.js",
     "client": "cd client && npm run dev",
     "dev": "concurrently \"npm run server\" \"npm run client\"",
-    "start": "node server/index.js"
+    "start": "node server/index.js",
+    "test": "node --test \"server/**/__tests__/*.test.js\""
   },
   "prisma": {
     "seed": "node prisma/seed.js"
@@ -20,9 +21,8 @@
     "cookie-parser": "^1.4.7",
     "cors": "^2.8.6",
     "dotenv": "^17.3.1",
-    "express": "^4.22.1",
+    "express": "^4.22.3",
     "express-rate-limit": "^8.3.1",
-    "express-session": "^1.19.0",
     "helmet": "^8.1.0",
     "ioredis": "^5.10.1",
     "jsonwebtoken": "^9.0.3",
