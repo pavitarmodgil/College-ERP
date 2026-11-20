@@ -99,7 +99,7 @@ The API runs on `http://localhost:4000` and the client on `http://localhost:5173
 | POST | `/verify-otp` | Verify OTP → issue JWT tokens |
 | POST | `/refresh` | Refresh access token |
 | POST | `/logout` | Clear refresh cookie |
-| POST | `/reset-password` | Change password (first-login) |
+| POST | `/reset-password` | Change your own password (signed in; first-login or with current password) |
 
 ### Users — `/api/users` (Admin)
 | Method | Path | Description |
@@ -271,7 +271,7 @@ College-ERP/
 - **JWT** access tokens (15 min) + refresh tokens in httpOnly cookies (7 days)
 - **6-digit OTP** via email, stored in Redis with 5-minute TTL
 - **hCaptcha** verification on login
-- **Rate limiting**: 5 login attempts / 15 min / IP, 3 OTP requests / hour
+- **Rate limiting**: 5 failed logins / 15 min / IP, 10 failed OTP checks / hour / IP
 - **Helmet** security headers on all responses
 - **CORS** configured for client origin only
 - **Role-based access control** on every API endpoint

@@ -1,17 +1,21 @@
 import { useState } from 'react'
-import { useNavigate } from 'react-router-dom'
+import { Navigate, useNavigate } from 'react-router-dom'
 import { useAuth } from '../context/AuthContext'
 import api from '../lib/api'
 
 const ROLE_HOME = { ADMIN: '/admin', TEACHER: '/teacher', STUDENT: '/student' }
 
 export default function ResetPasswordPage() {
-  const { user, logout } = useAuth()
+  const { user, loading: authLoading } = useAuth()
   const navigate = useNavigate()
   const [newPassword, setNewPassword] = useState('')
   const [confirm, setConfirm] = useState('')
   const [error, setError] = useState('')
   const [loading, setLoading] = useState(false)
+
+  // The reset endpoint acts on the signed-in account, so this page only makes
+  // sense after login (password + OTP). Signed-out visitors go back to login.
+  if (!authLoading && !user) return <Navigate to="/" replace />
 
   async function handleSubmit(e) {
     e.preventDefault()
@@ -21,7 +25,7 @@ export default function ResetPasswordPage() {
     }
     setLoading(true)
     try {
-      await api.post('/auth/reset-password', { email: user.email, newPassword })
+      await api.post('/auth/reset-password', { newPassword })
       // Token is still valid — go straight to dashboard, no need to re-login
       navigate(ROLE_HOME[user?.role] || '/')
     } catch (err) {

@@ -8,7 +8,8 @@ router.post('/login', loginLimiter, login)
 router.post('/verify-otp', otpLimiter, verifyOTP)
 router.post('/refresh', refresh)
 router.post('/logout', logout)
-router.post('/reset-password', resetPassword)
+// Authenticated: changes the caller's own password (target comes from the JWT)
+router.post('/reset-password', authGuard, resetPassword)
 
 // Test route — verifies authGuard is working (Step 15, Test 4)
 router.get('/me', authGuard, (req, res) => {
