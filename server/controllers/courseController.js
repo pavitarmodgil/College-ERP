@@ -1,5 +1,4 @@
-const { PrismaClient } = require('@prisma/client')
-const prisma = new PrismaClient()
+const prisma = require('../lib/prisma')
 
 // GET /api/courses — role-scoped list
 async function listCourses(req, res, next) {
@@ -76,9 +75,22 @@ async function getAvailableCourses(req, res, next) {
 }
 
 // GET /api/courses/:id
+// The enrollment roster (student emails + IDs) is personal data, so it is
+// returned only to admins and to teachers assigned to this course. Everyone
+// else gets the catalogue view: course info, teachers, enrollment count.
 async function getCourseById(req, res, next) {
   try {
     const id = parseInt(req.params.id)
+    if (!Number.isInteger(id)) return res.status(404).json({ error: 'Course not found' })
+    const { role, id: userId } = req.user
+
+    let canSeeRoster = role === 'ADMIN'
+    if (role === 'TEACHER') {
+      const assignment = await prisma.courseTeacher.findUnique({
+        where: { courseId_userId: { courseId: id, userId } },
+      })
+      canSeeRoster = Boolean(assignment)
+    }
 
     const course = await prisma.course.findUnique({
       where: { id },
@@ -89,16 +101,27 @@ async function getCourseById(req, res, next) {
             teacher: { select: { id: true, email: true, teacherId: true } },
           },
         },
-        enrollments: {
-          include: {
-            user: { select: { id: true, email: true, studentId: true } },
+        ...(canSeeRoster && {
+          enrollments: {
+            include: {
+              user: { select: { id: true, email: true, studentId: true } },
+            },
           },
-        },
+        }),
         _count: { select: { enrollments: true } },
       },
     })
 
     if (!course) return res.status(404).json({ error: 'Course not found' })
+
+    // Students may view active courses (to browse) or courses they're in.
+    if (role === 'STUDENT' && !course.isActive) {
+      const enrollment = await prisma.enrollment.findUnique({
+        where: { userId_courseId: { userId, courseId: id } },
+      })
+      if (!enrollment) return res.status(404).json({ error: 'Course not found' })
+    }
+
     res.json(course)
   } catch (err) {
     next(err)
