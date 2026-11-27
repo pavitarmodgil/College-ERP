@@ -8,6 +8,7 @@
 
 const prisma = require('./prisma')
 const { calculateLetterGrade } = require('./gradeUtils')
+const mlRisk = require('./mlRisk')
 
 // Component weights for the predicted final grade.
 const WEIGHTS = { INTERNAL: 0.2, MID_TERM: 0.3, FINAL: 0.5 }
@@ -120,13 +121,45 @@ function predictFinalGrade(gradeMap) {
 
 // ---- Data-aware -----------------------------------------------------------
 
+// Optional ML at-risk estimate (FUT-1, behind ML_RISK_ENABLED). Returns the
+// response-level `mlRisk` block and a per-enrollment scorer. Any failure here
+// (missing/corrupt model, bad input) is contained: the course gets
+// { status: 'UNAVAILABLE' } and the rule-based insights are untouched.
+function createMlScorer() {
+  let model
+  try {
+    model = mlRisk.loadModel()
+  } catch (err) {
+    console.error('[mlRisk] model unavailable:', err.message)
+    return {
+      info: { enabled: true, available: false, disclaimer: mlRisk.DISCLAIMER },
+      score: () => ({ status: 'UNAVAILABLE' }),
+    }
+  }
+  return {
+    info: { enabled: true, available: true, ...mlRisk.modelInfo(model) },
+    score: (args) => {
+      try {
+        return mlRisk.scoreEnrollment(model, args)
+      } catch (err) {
+        console.error('[mlRisk] scoring failed:', err.message)
+        return { status: 'UNAVAILABLE' }
+      }
+    },
+  }
+}
+
 // Per-course academic insight for one student: attendance risk, grade
 // projection, current letter, and the nearest upcoming assessment.
-async function buildStudentInsights(userId) {
+// With { mlRisk: true } each course also carries an experimental `mlRisk`
+// estimate; without it the response is exactly the rule-based shape.
+async function buildStudentInsights(userId, { mlRisk: mlEnabled = false } = {}) {
   const enrollments = await prisma.enrollment.findMany({
     where: { userId },
     include: {
-      course: { select: { id: true, name: true, code: true } },
+      course: {
+        select: { id: true, name: true, code: true, type: true, department: { select: { code: true } } },
+      },
       attendance: { select: { present: true } },
       grades: { select: { component: true, marks: true, letterGrade: true } },
     },
@@ -149,6 +182,8 @@ async function buildStudentInsights(userId) {
       if (!nextByCourse[a.courseId]) nextByCourse[a.courseId] = a
     }
   }
+
+  const ml = mlEnabled ? createMlScorer() : null
 
   const courses = enrollments.map((enrollment) => {
     const total = enrollment.attendance.length
@@ -176,7 +211,7 @@ async function buildStudentInsights(userId) {
       prediction.projectedGrade !== null &&
       ['F', 'P'].includes(prediction.projectedGrade)
 
-    return {
+    const insight = {
       courseId: enrollment.course.id,
       courseName: enrollment.course.name,
       courseCode: enrollment.course.code,
@@ -184,9 +219,13 @@ async function buildStudentInsights(userId) {
       grade: { ...prediction, currentLetter, gradeRisk },
       nextAssessment: nextByCourse[enrollment.course.id] || null,
     }
+    if (ml) {
+      insight.mlRisk = ml.score({ attended, total, gradeMap, course: enrollment.course })
+    }
+    return insight
   })
 
-  return { courses }
+  return ml ? { courses, mlRisk: ml.info } : { courses }
 }
 
 module.exports = {

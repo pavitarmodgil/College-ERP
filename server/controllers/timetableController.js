@@ -1,5 +1,6 @@
 const prisma = require('../lib/prisma')
 const { buildStudentInsights, timesOverlap } = require('../lib/timetableInsights')
+const { isMlRiskEnabled } = require('../lib/mlRisk')
 
 const DAYS_ORDER = ['MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT']
 
@@ -269,9 +270,10 @@ async function deleteEntry(req, res, next) {
 
 // GET /api/timetable/insights — Student only
 // Per-course attendance risk, grade projection, and next assessment.
+// ML_RISK_ENABLED=true adds an experimental per-course `mlRisk` estimate.
 async function getInsights(req, res, next) {
   try {
-    const insights = await buildStudentInsights(req.user.id)
+    const insights = await buildStudentInsights(req.user.id, { mlRisk: isMlRiskEnabled() })
     res.json(insights)
   } catch (err) {
     next(err)
