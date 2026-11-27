@@ -36,7 +36,8 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │   │   │   └── AuthContext.jsx    Global auth state (user, token, login, logout)
 │   │   ├── lib/
 │   │   │   └── api.js             Axios instance — attaches JWT, handles silent refresh
-│   │   ├── components/            12 reusable UI pieces (modals, sidebar, guards)
+│   │   ├── components/            15 reusable UI pieces (modals, sidebar, guards,
+│   │   │                          CalendarView, AcademicCommandCenter, UpcomingAssessmentsWidget)
 │   │   └── pages/
 │   │       ├── LoginPage.jsx
 │   │       ├── ResetPasswordPage.jsx
@@ -44,14 +45,14 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │   │       ├── TeacherDashboard.jsx
 │   │       ├── StudentDashboard.jsx
 │   │       ├── AnnouncementsPage.jsx  (shared teacher + student)
-│   │       ├── admin/             7 pages — Users, Courses, Departments, Timetable, Announcements, StudentProfile, AdminProfile
+│   │       ├── admin/             8 pages — Users, Courses, Departments, Timetable, TimetableGenerator, Announcements, StudentProfile, AdminProfile
 │   │       ├── teacher/           6 pages — Attendance, AttendanceSession, AttendanceHistory, Grades, GradeEntry, Timetable
 │   │       └── student/           3 pages — Attendance, Grades, Timetable
 │
 ├── server/
 │   ├── index.js                   Express bootstrap — middleware stack + route mounting
-│   ├── controllers/               7 files, one per resource; all business logic lives here
-│   ├── routes/                    7 files, one per resource; thin — just wires paths to controllers
+│   ├── controllers/               8 files, one per resource; all business logic lives here
+│   ├── routes/                    8 files, one per resource; thin — just wires paths to controllers
 │   ├── middleware/
 │   │   ├── authGuard.js           JWT verification → req.user; requireRole() factory
 │   │   ├── rateLimiter.js         loginLimiter (5 failed/15min/IP), otpLimiter (10 failed/hour/IP)
@@ -60,11 +61,14 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │       ├── prisma.js              Singleton PrismaClient export
 │       ├── redis.js               Singleton ioredis client
 │       ├── mailer.js              Resend HTTP API client + sendOTPEmail helper
-│       └── gradeUtils.js          Pure functions: marks → letter grade, GPA calculation
+│       ├── gradeUtils.js          Pure functions: marks → letter grade, GPA calculation
+│       ├── timetableInsights.js   Rule-based attendance risk + weighted grade projection
+│       └── __tests__/
+│           └── timetableInsights.test.js   node --test unit tests for the pure helpers
 │
 ├── prisma/
-│   ├── schema.prisma              9 models, 4 enums
-│   ├── seed.js                    3 depts, 20 users, 9 courses, full academic records (bcryptjs hashed)
+│   ├── schema.prisma              10 models, 5 enums
+│   ├── seed.js                    3 depts, 18 users, 12 courses, full academic records (bcryptjs hashed)
 │   └── migrations/
 │
 ├── scripts/
@@ -101,6 +105,24 @@ Both models use `@@unique` composite constraints + Prisma `upsert()`. Re-submitt
 
 ### 7. gradeUtils.js Is Pure
 All letter-grade and GPA logic is in `server/lib/gradeUtils.js` as pure functions with no DB calls or side effects. Changing the grade scale means editing one file. The functions are trivially unit-testable.
+
+### 8. timetableInsights.js Separates Pure Logic from Data Access
+`server/lib/timetableInsights.js` holds the Smart Timetable analytics. Three functions — `getAttendanceRisk`, `timesOverlap`, `predictFinalGrade` — are pure and unit-tested in `server/lib/__tests__/timetableInsights.test.js`. Only `buildStudentInsights()` touches the DB. This split is deliberate: the interesting logic is testable without a database.
+
+**These are deterministic rules, not machine learning:**
+
+| Rule | Definition |
+|---|---|
+| Component weights | `INTERNAL 0.2 · MID_TERM 0.3 · FINAL 0.5` |
+| Attendance bands | `≥ 75%` SAFE · `65–74%` WARNING · `< 65%` CRITICAL |
+| `classesNeeded` | Solves `(attended + x) / (total + x) ≥ 0.75` for `x` |
+| `gradeRisk` | `true` when projected letter is `F` or `P` (i.e. below 40 marks) |
+| Missing FINAL | Projection assumes the final equals the current average, and reports `marksNeededInFinal` to hold the projected band |
+
+> The `gradeRisk` rule is the ERP's own definition of "academically at risk" and is the reason the ML module's `at_risk` target uses a **< 40 marks** threshold rather than the `F`-only cutoff of 35. See [`ai/README.md`](ai/README.md).
+
+### 9. The Auto Timetable Generator Is Greedy, and Never Auto-Saves
+`POST /api/timetable/generate` runs an in-memory greedy scheduler over fixed 1-hour slots (`08:00–12:00`, `14:00–17:00`, Mon–Sat) and returns a **draft only** — nothing is written. The admin reviews the draft, then commits it via `POST /api/timetable/bulk`, which re-runs the full conflict check per entry and writes inside a `$transaction`. Constraints: no teacher/room/course double-booking, and never the same course twice on one day. Unplaceable lectures come back in a `warnings[]` array rather than failing the whole request.
 
 ---
 
@@ -155,8 +177,15 @@ POST /api/auth/logout
 | `Grade` | enrollmentId, component, marks, letterGrade | [enrollmentId, component] |
 | `Announcement` | title, body, targetRole (String), authorId | — |
 | `TimetableEntry` | courseId, teacherId, dayOfWeek, startTime, endTime, room, semester | — |
+| `Assessment` | title, courseId, dueDate, type, semester, createdById? | — |
 
-**Enums:** `Role` (ADMIN/TEACHER/STUDENT) · `CourseType` (MANDATORY/ELECTIVE) · `GradeComponent` (INTERNAL/MID_TERM/FINAL) · `DayOfWeek` (MON–SAT)
+**Enums:** `Role` (ADMIN/TEACHER/STUDENT) · `CourseType` (MANDATORY/ELECTIVE) · `GradeComponent` (INTERNAL/MID_TERM/FINAL) · `DayOfWeek` (MON–SAT) · `AssessmentType` (QUIZ/ASSIGNMENT/EXAM/PROJECT)
+
+**Indexes:** `TimetableEntry` on `teacherId`, `room`, `semester`, `dayOfWeek` · `Assessment` on `courseId`, `dueDate`, `semester`
+
+> **`Assessment` carries no marks.** It is a *scheduled item* (title, due date, type) used by the upcoming-assessments widgets — not a graded score. The only marks in the system live on `Grade` (INTERNAL / MID_TERM / FINAL). Any ML feature named `assessment_average` must therefore be derived from `Grade`, not from `Assessment`.
+
+> `Assessment.createdById` is nullable with no cascade — deleting the authoring user does not delete the assessment.
 
 > `targetRole` on `Announcement` is a plain `String`, not the `Role` enum, because the valid values include `ALL` which has no equivalent in the `Role` enum.
 
@@ -252,9 +281,24 @@ POST /api/auth/logout
 |---|---|---|---|
 | GET | `/` | ALL | Entries scoped to role (admin: all; teacher/student: own) |
 | GET | `/semesters` | ADMIN | Distinct semester values for dropdown |
+| GET | `/insights` | STUDENT | Per-course attendance risk + grade projection + next assessment |
+| POST | `/generate` | ADMIN | Greedy scheduler → returns draft + warnings (**saves nothing**) |
+| POST | `/bulk` | ADMIN | Commit a reviewed draft — re-checks conflicts, writes in a transaction |
 | POST | `/` | ADMIN | Create entry |
 | PATCH | `/:id` | ADMIN | Update entry |
 | DELETE | `/:id` | ADMIN | Delete entry |
+
+> Route order matters: `/semesters` and `/insights` are registered **before** `/` and `/:id`, or Express matches them as `:id` values.
+
+### Assessments · `/api/assessments`
+| Method | Path | Auth | Purpose |
+|---|---|---|---|
+| GET | `/` | ALL | Role-scoped list, sorted by due date. Filters: `?courseId=` `?upcoming=1` |
+| POST | `/` | TEACHER · ADMIN | Create (teacher restricted to own courses) |
+| PATCH | `/:id` | TEACHER · ADMIN | Update (teacher restricted to own courses) |
+| DELETE | `/:id` | TEACHER · ADMIN | Hard delete |
+
+Role scoping is applied in the controller, not the router: admin sees all; teacher sees courses from `CourseTeacher`; student sees courses from `Enrollment`. An explicit `?courseId=` is **intersected** with that scope — it cannot widen it.
 
 ---
 
@@ -273,6 +317,7 @@ All routes defined in `client/src/App.jsx` — **edit only this file when adding
 | `/admin/departments` | ADMIN | DepartmentsPage |
 | `/admin/announcements` | ADMIN | AdminAnnouncementsPage |
 | `/admin/timetable` | ADMIN | AdminTimetablePage |
+| `/admin/timetable/generator` | ADMIN | TimetableGeneratorPage (auto-scheduler draft + review) |
 | `/admin/profile` | ADMIN | AdminProfilePage (placeholder — Phase 6) |
 | `/teacher` | TEACHER | TeacherDashboard |
 | `/teacher/attendance` | TEACHER | TeacherAttendancePage |
@@ -358,42 +403,48 @@ Run `npx prisma db seed` to populate. The seed is idempotent (upsert-safe to re-
 
 **Departments:** CSE · ECE · ME
 
+The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` values reassigned since earlier revisions. Re-running is safe; IDs are not stable across seed rewrites.
+
 **Admins** (password: `admin123`):
 
 | Email | Notes |
 |---|---|
 | `pavitarmodgil001@gmail.com` | Primary admin (no firstName/lastName) |
-| `admin.secondary@uni.com` | Secondary Admin |
+| `admin2@uni.com` | Secondary Admin |
 
 **Teachers** (password: `teacher123`):
 
-| Email | ID | Department |
-|---|---|---|
-| `aman.kumar@uni.com` | TCH001 | CSE |
-| `rajesh.singh@uni.com` | TCH002 | CSE |
-| `priya.sharma@uni.com` | TCH003 | ECE |
-| `harveen.kaur@uni.com` | TCH004 | CSE (mustResetPassword: true) |
-| `vikram.patel@uni.com` | TCH005 | ME |
-| `anjali.gupta@uni.com` | TCH006 | ECE |
-| `neha.mishra@uni.com` | TCH007 | CSE |
-| `abheyjeet100@gmail.com` | TCH100 | CSE (legacy, no name) |
+| Email | ID | Department | Notes |
+|---|---|---|---|
+| `pavitar0883.becse24@chitkara.edu.in` | TCH001 | CSE | Primary teacher account — 2 courses |
+| `harveen.kaur@uni.com` | TCH002 | CSE | `mustResetPassword: true` |
+| `rajesh.patel@uni.com` | TCH003 | ECE | |
+| `priya.sharma@uni.com` | TCH004 | ME | |
+| `guest.instructor@uni.com` | TCH005 | CSE | Part-time |
+| `unassigned.teacher@uni.com` | TCH006 | ECE | **0 courses** — edge case |
+| `demo.teacher@uni.com` | TCH010 | CSE | |
+| `abheyjeet100@gmail.com` | TCH100 | CSE | Legacy, no name — 2 courses |
 
 **Students** (password: `student123`):
 
-| Email | ID | Department |
-|---|---|---|
-| `aseemkamra22@gmail.com` | STU001 | CSE |
-| `rohan.sharma@uni.com` | STU002 | CSE |
-| `aseem.kamra@uni.com` | STU003 | CSE (legacy, no name) |
-| `kavya.nair@uni.com` | STU004 | ECE |
-| `aditya.verma@uni.com` | STU005 | ECE |
-| `disha.mehta@uni.com` | STU006 | ME |
-| `arjun.mishra@uni.com` | STU007 | ME |
-| `zara.khan@uni.com` | STU008 | CSE |
-| `tanvi.singh@uni.com` | STU009 | CSE |
-| `priya.jain@uni.com` | STU010 | CSE |
+| Email | ID | Department | Persona |
+|---|---|---|---|
+| `aseem.kamra@uni.com` | STU003 | CSE | Legacy (no name) · **100% attendance** · 4 CSE courses |
+| `pavitarmodgil1512@gmail.com` | STU100 | CSE | Primary demo student · ~93% · full academic data |
+| `maya.singh@uni.com` | STU004 | CSE | Electives only · 100% attendance |
+| `arjun.verma@uni.com` | STU005 | ECE | **High performer** — all `O`, GPA 10.0 · cross-dept CSE enrollment |
+| `poor.performer@uni.com` | STU006 | CSE | **At-risk** — ~57–64% attendance, barely-passing grades |
+| `incomplete.grades@uni.com` | STU007 | ME | INTERNAL + MID_TERM only, **FINAL pending** |
+| `cross.dept@uni.com` | STU008 | ECE | Fully enrolled ECE |
+| `no.courses@uni.com` | STU009 | CSE | **No enrollments** — empty-dashboard edge case |
 
-**Seed totals:** 3 departments · 9 courses · 11 course-teacher assignments · 19 enrollments · 133 attendance records · 24 grade entries · 28 timetable entries · 12 announcements
+**Courses (12):** CSE210 Data Structures · CSE320 Database Systems · CSE340 Web Engineering · CSE450 Machine Learning Basics · CSE460 Mobile App Development · ECE210 Digital Electronics · ECE320 Microprocessors · ECE410 Signal Processing · ECE420 · ME210 Thermodynamics · ME220 Fluid Mechanics · ME450 CAD & Design
+
+**Seed totals:** 3 departments · 18 users (2 admin · 8 teachers · 8 students) · 12 courses · 13 course-teacher assignments · 24 enrollments · 336 attendance records (24 × 14 dates) · 69 grade entries · 27 timetable entries (semester `2026-EVEN`) · 6 assessments · 14 announcements
+
+> Assessment due dates are generated **relative to `now()`**, so the upcoming/overdue widgets demo correctly whenever the seed runs. The seed clears the semester's assessments first, so this part is not upsert-based.
+
+> The student personas are deliberately spread across the risk spectrum (perfect · high · average · incomplete · at-risk · unenrolled). This is what makes the seed useful for exercising the insights engine — and what makes it far too small to train on. See [`ai/README.md`](ai/README.md).
 
 > Users created before the `firstName`/`lastName` migration have `null` in those fields and fall back to email-derived display names throughout the UI.
 
@@ -419,6 +470,27 @@ Run `npx prisma db seed` to populate. The seed is idempotent (upsert-safe to re-
   - [x] CORS: trim `CLIENT_URL` whitespace and trailing slash
   - [x] Redis TLS support via `REDIS_TLS=true` (Upstash on Railway)
   - [x] Health check endpoint `/api/health`
+- [x] Phase 6 — Smart Timetable 2.0
+  - [x] `Assessment` model + `AssessmentType` enum + `TimetableEntry` indexes (migration `20260531151946_smart_timetable_assessments_indexes`)
+  - [x] Assessments CRUD API — role-scoped reads, teacher restricted to own courses
+  - [x] `timetableInsights.js` — attendance risk bands + weighted grade projection, with `node --test` unit tests
+  - [x] `GET /api/timetable/insights` — per-course student insight feed
+  - [x] Auto Timetable Generator — greedy scheduler (`/generate` draft → `/bulk` commit) + admin review page
+  - [x] `CalendarView` shared component + calendar/grid toggle on student and teacher timetables
+  - [x] `AcademicCommandCenter` + `UpcomingAssessmentsWidget` on the student dashboard
+- [x] Phase 7 — AI/ML Student Performance & At-Risk Prediction (see [`ai/README.md`](ai/README.md))
+  - [x] `ai/scripts/export_student_academic_data.js` — read-only ERP → CSV at student-course grain
+  - [x] `ai/scripts/prepare_uci_dataset.py` — UCI Student Performance (CC BY 4.0) mapped to the same schema
+  - [x] `ai/notebooks/student_performance_at_risk.ipynb` — 63 cells, executed end to end
+  - [x] Classification (LogReg · Decision Tree · Random Forest) + regression (Linear · RF Regressor)
+  - [x] Benchmarked against the ERP's own `predictFinalGrade` rule on the same test set — ML wins
+  - [x] 12 figures exported to `ai/reports/` for the CE presentation (CE-1 state preserved at git tag `ce1-submission`)
+- [x] Phase 7b — CE-2 final implementation (branch `feat/ai-ce2`)
+  - [x] Third dataset: `ai/scripts/prepare_oulad_dataset.py` — Open University OULAD (CC BY 4.0), 4,959 rows → 6,033 total
+  - [x] Notebook extended to 98 cells / 26 sections: KNN · Naive Bayes · SVM · Polynomial Regression · 5-fold CV · bias-variance curves · GridSearchCV · K-Means / hierarchical / DBSCAN · fairness audit
+  - [x] Selection by cross-validated F2; selected Random Forest (tuned) — recall 0.865 vs ERP rule 0.316
+  - [x] 21 figures in `ai/reports/`, written by the notebook's `show()` helper; `ai/requirements.txt` added
+  - [ ] CE-2 PPT (Chitkara template) and spiral-bound project report
 
 ---
 
@@ -433,3 +505,7 @@ Run `npx prisma db seed` to populate. The seed is idempotent (upsert-safe to re-
 | Change role permissions | `server/middleware/authGuard.js` → `requireRole()` |
 | Change email content | `server/lib/mailer.js` |
 | Change rate limits | `server/middleware/rateLimiter.js` |
+| Change risk bands / grade weights | `server/lib/timetableInsights.js` — update `__tests__/timetableInsights.test.js` too |
+| Run the unit tests | `node --test "server/lib/__tests__/*.test.js"` (12 tests; no `npm test` script exists yet) |
+| Change the scheduler's slots or constraints | `server/controllers/timetableController.js` → `GEN_SLOTS` / `GEN_DAYS` / `hasConflict` |
+| Work on the ML module | `ai/` — see [`ai/README.md`](ai/README.md); do **not** modify ERP controllers for it |

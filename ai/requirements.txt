@@ -1,0 +1,11 @@
+# AI/ML module - Python dependencies (tested with Python 3.14)
+# Install:  pip install -r ai/requirements.txt
+numpy>=2.0
+pandas>=2.2
+scikit-learn>=1.6
+scipy>=1.13
+matplotlib>=3.10
+joblib>=1.4
+# to run the notebook locally (Colab already has these)
+jupyter
+nbclient
