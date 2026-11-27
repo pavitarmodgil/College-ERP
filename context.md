@@ -173,7 +173,7 @@ Announcement → User (author)
 | Method | Path | Auth | Purpose |
 |---|---|---|---|
 | GET | `/semesters` | ADMIN | Distinct semester values for dropdown |
-| GET | `/insights` | STUDENT | Per-course attendance risk + grade projection + next assessment |
+| GET | `/insights` | STUDENT | Per-course attendance risk + grade projection + next assessment; per-course `mlRisk` when `ML_RISK_ENABLED=true` |
 | GET | `/` | ALL | Entries scoped to role (admin: all; teacher/student: own) |
 | POST | `/generate` | ADMIN | Greedy auto-scheduler → draft + warnings (saves nothing) |
 | POST | `/bulk` | ADMIN | Commit reviewed draft (re-checks conflicts, `$transaction`) |
@@ -250,9 +250,18 @@ All routes defined in `client/src/App.jsx`.
 
 ## Current State
 
-**Last updated:** 2026-11-17
-**Current branch:** `feat/ai-ce2` (off `feat/ai-performance-prediction`; CE-1 state at tag `ce1-submission`)
-**Status:** Phases 0–7 complete; CE-2 notebook implementation complete. PPT and report not started. CE-2 evaluation 25 Nov – 3 Dec 2026.
+**Last updated:** 2026-11-27
+**Current branch:** `feat/ml-risk-badge`. It is stacked on `fix/sprint1-critical` (PR #14) with `feat/ai-ce2` merged in, and its PR targets `dev`.
+**Status:** Phases 0–7 complete; CE-2 notebook complete. FUT-1 (ML risk badge in the ERP) implemented behind `ML_RISK_ENABLED`, default off.
+
+### ML risk badge (FUT-1), 2026-11-27
+
+- The notebook's tuned Random Forest is exported to `server/lib/ml/atRiskModel.json` by `ai/scripts/export_at_risk_model.py`, which reads the gitignored `ai/models/at_risk_classifier.joblib`. `server/lib/mlRisk.js` scores it in pure JS, so no Python service is needed.
+- Parity: `npm test` checks it against the notebook's section 23 probabilities and against sklearn `predict_proba` fixtures (to 1e-6).
+- `GET /api/timetable/insights` adds per-course `mlRisk` only when `ML_RISK_ENABLED=true`. Failures degrade to `UNAVAILABLE`, and missing INTERNAL/MID_TERM/attendance gives `INSUFFICIENT_DATA`.
+- The student dashboard's Course Performance Breakdown cards show the rule-based attendance chip and, when the flag is on, the "ML risk estimate" badge. Its tooltip gives the top 3 factors and the disclaimer "Experimental decision support, not a grade".
+- Verified in the browser as **STU003**, because the current seed has no STU001. Its probabilities (CSE210 0.047, CSE320 0.063) match the notebook's rows for the same student.
+- Known caveat: `course_type` often ranks as a top factor. All OULAD rows are `NOT_RECORDED`, so the feature partly acts as a data-source proxy. The model is not calibrated on ERP data; do not enable it in production until it is retrained or calibrated.
 
 ### Phase 7 / CE-2 at a glance
 
@@ -260,14 +269,14 @@ All routes defined in `client/src/App.jsx`.
 - OULAD makes the task harder and more realistic: its exam is far less predictable from coursework (corr 0.48 vs UCI 0.91), so CE-2 metrics are lower than CE-1 (R² 0.88 → 0.53). This is expected and explained in the notebook.
 - Six classifiers + three regressors, 5-fold CV, bias-variance curves, GridSearchCV, K-Means/hierarchical/DBSCAN clustering, fairness audit.
 - Selected: **Random Forest (tuned)** for at-risk (test recall 0.865, 18 of 133 missed; ERP rule misses 91) and **Random Forest Regressor (tuned)** (MAE 10.97, R² 0.529). Selection metric is cross-validated **F2**.
-- Nothing in `server/` or `client/` was modified for this.
+- The CE-2 work itself touched nothing in `server/` or `client/`. Serving it came later, with FUT-1 above.
 
 ### What's working end-to-end
 
 - **Auth:** identifier (email / TCH001 / STU001) + password + hCaptcha + OTP → JWT + silent refresh. Dev bypass: `captchaToken: "dev-bypass"` skips hCaptcha.
 - **Admin:** user CRUD (firstName/lastName optional), course CRUD, assign/remove teachers, enroll/remove students, department list, announcement CRUD, timetable CRUD, **auto timetable generator (draft → review → bulk commit)**, dashboard stats + recent activity
 - **Teacher:** course list, mark attendance sessions (today + any past date via date picker), view full history per course, edit individual past records, enter grades per component, **create/edit assessments for own courses**, view timetable (grid + calendar toggle), view announcements
-- **Student:** self-enroll (browse `/available`), view attendance %, view grades + GPA, view timetable (grid + calendar toggle), **Academic Command Center + upcoming assessments + per-course risk insights**, view announcements
+- **Student:** self-enroll (browse `/available`), view attendance %, view grades + GPA, view timetable (grid + calendar toggle), **Academic Command Center + upcoming assessments + per-course risk insights**, per-course attendance band chip + flagged **ML risk estimate** badge, view announcements
 
 ### Smart Timetable 2.0 — how the insights work
 
@@ -277,14 +286,12 @@ All routes defined in `client/src/App.jsx`.
 - Attendance: `≥75%` SAFE · `65–74%` WARNING · `<65%` CRITICAL; `classesNeeded` solves `(attended+x)/(total+x) ≥ 0.75`
 - `gradeRisk = true` when the projected letter is `F` or `P` (below 40 marks) — this is the ERP's own "at risk" definition
 - When FINAL is missing, the projection assumes final = current average, and reports `marksNeededInFinal`
-- Pure helpers are unit-tested (12 tests, all passing): `node --test "server/lib/__tests__/*.test.js"`
-  — the bare-directory form fails on Node 24; the glob is required
+- Pure helpers are unit-tested; run everything with `npm test` (unit + API tests, no DB/Redis/network)
 
 ### Known technical debt
 
 - `server/controllers/courseController.js` and `server/controllers/announcementController.js` both instantiate `new PrismaClient()` directly instead of using the singleton at `server/lib/prisma.js`. This creates extra connection pools.
 - `express-session` is in `package.json` dependencies but is not used anywhere in the codebase.
-- **No `test` script in `package.json`.** `server/lib/__tests__/timetableInsights.test.js` says "run with `npm test`", but that script does not exist. Suggested fix: add `"test": "node --test \"server/lib/__tests__/*.test.js\""`.
 - `POST /api/timetable/bulk` re-checks conflicts in a loop of `await`s *before* the transaction, so a concurrent write between check and commit could still slip through. Low risk for single-admin use.
 
 ### Key file locations
@@ -299,6 +306,7 @@ All routes defined in `client/src/App.jsx`.
 | Risk bands + grade projection | `server/lib/timetableInsights.js` |
 | Auto-scheduler slots/constraints | `server/controllers/timetableController.js` (`GEN_SLOTS`, `GEN_DAYS`) |
 | ML module (Phase 7) | `ai/` — see `ai/README.md` |
+| ML serving (FUT-1) | `server/lib/mlRisk.js` + `server/lib/ml/atRiskModel.json`; badge in `client/src/components/MlRiskBadge.jsx` |
 | Prisma singleton | `server/lib/prisma.js` |
 | Redis singleton | `server/lib/redis.js` |
 | Email / OTP sender | `server/lib/mailer.js` |
@@ -309,4 +317,4 @@ All routes defined in `client/src/App.jsx`.
 
 Paste this file and add:
 
-> "I'm working on my University Management System. Current branch: feat/ai-performance-prediction | Task: [describe what you want to do]"
+> "I'm working on my University Management System. Current branch: feat/ml-risk-badge | Task: [describe what you want to do]"

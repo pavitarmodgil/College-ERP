@@ -63,8 +63,11 @@ Built as a production-learning project — every pattern chosen to mirror indust
 │       ├── mailer.js              Resend HTTP API client + sendOTPEmail helper
 │       ├── gradeUtils.js          Pure functions: marks → letter grade, GPA calculation
 │       ├── timetableInsights.js   Rule-based attendance risk + weighted grade projection
+│       ├── mlRisk.js              Pure JS scorer for the exported at-risk Random Forest (FUT-1, flagged)
+│       ├── ml/atRiskModel.json    Exported model parameters (300 trees + preprocessing; no student data)
 │       └── __tests__/
-│           └── timetableInsights.test.js   node --test unit tests for the pure helpers
+│           ├── timetableInsights.test.js   node --test unit tests for the pure helpers
+│           └── mlRisk.test.js              scorer parity with the notebook + sklearn fixtures
 │
 ├── prisma/
 │   ├── schema.prisma              10 models, 5 enums
@@ -123,6 +126,15 @@ All letter-grade and GPA logic is in `server/lib/gradeUtils.js` as pure function
 
 ### 9. The Auto Timetable Generator Is Greedy, and Never Auto-Saves
 `POST /api/timetable/generate` runs an in-memory greedy scheduler over fixed 1-hour slots (`08:00–12:00`, `14:00–17:00`, Mon–Sat) and returns a **draft only** — nothing is written. The admin reviews the draft, then commits it via `POST /api/timetable/bulk`, which re-runs the full conflict check per entry and writes inside a `$transaction`. Constraints: no teacher/room/course double-booking, and never the same course twice on one day. Unplaceable lectures come back in a `warnings[]` array rather than failing the whole request.
+
+### 10. The ML Risk Estimate Is Scored in Node, Behind a Flag, Next to the Rules
+Roadmap FUT-1. The notebook's tuned Random Forest (`ai/notebooks/student_performance_at_risk.ipynb`) is exported by `ai/scripts/export_at_risk_model.py` to `server/lib/ml/atRiskModel.json`. `server/lib/mlRisk.js` then scores it in plain JS, a pure function like `gradeUtils.js`, so Railway needs no Python service. It reproduces sklearn's `predict_proba` (tested to 1e-6), and it explains each score with a treeinterpreter-style decomposition into the top 3 factors.
+
+- **Off by default.** `ML_RISK_ENABLED=true` adds `mlRisk` to `GET /api/timetable/insights`. With the flag off, the response is the plain rule-based shape.
+- **Never breaks the dashboard.** A missing or corrupt model, or bad data on one course, gives `{ status: 'UNAVAILABLE' }` for the ML part only. A course without attendance, INTERNAL or MID_TERM marks gets `INSUFFICIENT_DATA` instead of a guess.
+- **Decision support, never a grade.** It was trained on UCI + OULAD (plus 30 ERP rows) and is **not calibrated on ERP data**. The UI labels it "experimental decision support, not a grade" and always shows it beside the rule-based band, never instead of it.
+- Inputs: attendance % (2 dp), INTERNAL, MID_TERM, their mean and difference, `Course.department.code`, `Course.type`, and the model's own attendance band. That band comes from pd.cut, which is right-inclusive, so **exactly 75% is WARNING in the model** but SAFE in the rule-based band. Bands are LOW < 0.25 ≤ MODERATE < 0.5 ≤ HIGH; 0.5 is the notebook's decision threshold.
+- To retrain: re-run the notebook, then `python ai/scripts/export_at_risk_model.py`, which also regenerates the test fixtures. Then run `npm test`.
 
 ---
 
@@ -281,7 +293,7 @@ POST /api/auth/logout
 |---|---|---|---|
 | GET | `/` | ALL | Entries scoped to role (admin: all; teacher/student: own) |
 | GET | `/semesters` | ADMIN | Distinct semester values for dropdown |
-| GET | `/insights` | STUDENT | Per-course attendance risk + grade projection + next assessment |
+| GET | `/insights` | STUDENT | Per-course attendance risk + grade projection + next assessment; with `ML_RISK_ENABLED=true` also per-course `mlRisk` `{status, probability, band, finalGraded, factors[]}` and a top-level `mlRisk` `{enabled, available, model, trainedOn, disclaimer}` |
 | POST | `/generate` | ADMIN | Greedy scheduler → returns draft + warnings (**saves nothing**) |
 | POST | `/bulk` | ADMIN | Commit a reviewed draft — re-checks conflicts, writes in a transaction |
 | POST | `/` | ADMIN | Create entry |
@@ -374,6 +386,7 @@ HCAPTCHA_SECRET         hCaptcha secret key (server-side verification)
 CLIENT_URL              Frontend origin for CORS (http://localhost:5173 locally)
 API_PORT                4000
 NODE_ENV                development | production
+ML_RISK_ENABLED         "true" shows the experimental ML at-risk badge (FUT-1); default off
 
 # In client/.env:
 VITE_API_URL            http://localhost:4000/api (local dev) or deployed API URL
@@ -491,6 +504,12 @@ The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` va
   - [x] Selection by cross-validated F2; selected Random Forest (tuned) — recall 0.865 vs ERP rule 0.316
   - [x] 21 figures in `ai/reports/`, written by the notebook's `show()` helper; `ai/requirements.txt` added
   - [ ] CE-2 PPT (Chitkara template) and spiral-bound project report
+- [x] Phase 7c — ML risk badge in the ERP (FUT-1, branch `feat/ml-risk-badge`)
+  - [x] `ai/scripts/export_at_risk_model.py` — tuned RF → `server/lib/ml/atRiskModel.json` (651 KB)
+  - [x] `server/lib/mlRisk.js` — pure JS scorer + top-3 factors; parity-tested against the notebook
+  - [x] `mlRisk` on `GET /api/timetable/insights` behind `ML_RISK_ENABLED` (default off), failure-isolated
+  - [x] Student dashboard: rule-based attendance chip + "ML risk estimate" badge with tooltip and disclaimer
+  - [ ] Calibrate on real ERP data before turning the flag on in production
 
 ---
 
@@ -506,6 +525,7 @@ The seed opens with a **pre-flight block** that frees `studentId`/`teacherId` va
 | Change email content | `server/lib/mailer.js` |
 | Change rate limits | `server/middleware/rateLimiter.js` |
 | Change risk bands / grade weights | `server/lib/timetableInsights.js` — update `__tests__/timetableInsights.test.js` too |
-| Run the unit tests | `node --test "server/lib/__tests__/*.test.js"` (12 tests; no `npm test` script exists yet) |
+| Run the tests | `npm test` (unit + API tests; no DB, Redis or network needed) |
+| Re-export the ML model / change its bands | `ai/scripts/export_at_risk_model.py`, `server/lib/mlRisk.js`, and update `__tests__/mlRisk.test.js` too |
 | Change the scheduler's slots or constraints | `server/controllers/timetableController.js` → `GEN_SLOTS` / `GEN_DAYS` / `hasConflict` |
-| Work on the ML module | `ai/` — see [`ai/README.md`](ai/README.md); do **not** modify ERP controllers for it |
+| Work on the ML module | `ai/` — see [`ai/README.md`](ai/README.md). Serving goes only through `server/lib/mlRisk.js`; keep controllers free of ML logic |
