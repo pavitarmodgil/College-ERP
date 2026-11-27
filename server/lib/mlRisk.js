@@ -228,7 +228,8 @@ function scoreEnrollment(model, { attended, total, gradeMap, course }) {
 function modelInfo(model) {
   return {
     model: model.model,
-    trainedOn: Object.keys(model.trainingSources || {}).join(' + '),
+    // External sources only; the ~30 ERP rows were too few to calibrate on.
+    trainedOn: Object.keys(model.trainingSources || {}).filter((s) => s !== 'ERP').join(' + '),
     decisionThreshold: model.decisionThreshold,
     disclaimer: DISCLAIMER,
   }

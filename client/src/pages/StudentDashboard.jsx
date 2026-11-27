@@ -5,6 +5,7 @@ import api from '../lib/api'
 import AnnouncementsWidget from '../components/AnnouncementsWidget'
 import AcademicCommandCenter from '../components/AcademicCommandCenter'
 import UpcomingAssessmentsWidget from '../components/UpcomingAssessmentsWidget'
+import MlRiskBadge, { AttendanceBandChip } from '../components/MlRiskBadge'
 
 // Circumference of the r=24 progress ring (2·π·24 ≈ 150)
 const RING_C = 150
@@ -24,6 +25,11 @@ export default function StudentDashboard() {
   const [gpa, setGpa] = useState(null)
   const [perfCourses, setPerfCourses] = useState([])
   const [upcomingCount, setUpcomingCount] = useState(null)
+
+  // Per-course risk insights (rule-based band + optional ML estimate).
+  // Fetched on its own so a failure never blanks the academics above.
+  const [insightsByCourse, setInsightsByCourse] = useState({})
+  const [mlInfo, setMlInfo] = useState(null)
 
   async function fetchAvailable() {
     try {
@@ -65,10 +71,23 @@ export default function StudentDashboard() {
     }
   }
 
+  async function fetchInsights() {
+    try {
+      const { data } = await api.get('/timetable/insights')
+      const byCourse = {}
+      ;(data.courses || []).forEach((c) => { byCourse[c.courseId] = c })
+      setInsightsByCourse(byCourse)
+      setMlInfo(data.mlRisk?.enabled ? data.mlRisk : null)
+    } catch {
+      // non-fatal — cards render without the risk row
+    }
+  }
+
   useEffect(() => {
     fetchAvailable()
     fetchEnrolledCount()
     fetchAcademics()
+    fetchInsights()
   }, [])
 
   async function handleEnroll(courseId) {
@@ -202,6 +221,12 @@ export default function StudentDashboard() {
               <div>
                 <h3 className="text-2xl font-bold text-on-surface font-headline">Course Performance Breakdown</h3>
                 <p className="text-sm text-slate-500 mt-1 font-medium">Current Academic Semester</p>
+                {mlInfo && (
+                  <p className="text-xs text-on-surface-variant mt-1 flex items-center gap-1">
+                    <span className="material-symbols-outlined text-[14px]">science</span>
+                    ML risk estimates are {(mlInfo.disclaimer || 'Experimental decision support, not a grade').toLowerCase()}.
+                  </p>
+                )}
               </div>
               <button className="flex items-center gap-2 text-primary font-bold text-sm hover:underline">
                 View Detailed Transcript
@@ -232,6 +257,16 @@ export default function StudentDashboard() {
                         {' · '}
                         {c.overallGrade ? `Grade ${c.overallGrade}` : 'In progress'}
                       </p>
+                      {insightsByCourse[c.courseId] && (
+                        <div className="flex flex-wrap items-center gap-2 mt-3">
+                          <AttendanceBandChip attendance={insightsByCourse[c.courseId].attendance} />
+                          <MlRiskBadge
+                            risk={insightsByCourse[c.courseId].mlRisk}
+                            mlInfo={mlInfo}
+                            courseCode={c.courseCode}
+                          />
+                        </div>
+                      )}
                     </div>
                     {/* Progress ring — average marks */}
                     <div className="w-14 h-14 relative flex items-center justify-center flex-shrink-0">
