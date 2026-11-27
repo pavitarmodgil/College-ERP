@@ -1,6 +1,7 @@
 const bcrypt = require('bcryptjs')
+const crypto = require('crypto')
 const prisma = require('../lib/prisma')
-const { sendOTPEmail } = require('../lib/mailer')
+const { sendTempPasswordEmail } = require('../lib/mailer')
 
 // Helper: generate next student or teacher ID
 async function generateUserId(role) {
@@ -236,7 +237,9 @@ async function adminResetPassword(req, res, next) {
     })
     if (!user) return res.status(404).json({ error: 'User not found' })
 
-    const tempPassword = Math.random().toString(36).slice(-10) + 'A1!'
+    // Cryptographically random (Math.random is predictable). base64url keeps
+    // it typeable; the suffix satisfies common complexity expectations.
+    const tempPassword = crypto.randomBytes(9).toString('base64url') + 'A1!'
     const hashed = await bcrypt.hash(tempPassword, 12)
 
     await prisma.user.update({
@@ -244,10 +247,15 @@ async function adminResetPassword(req, res, next) {
       data: { password: hashed, mustResetPassword: true },
     })
 
-    await sendOTPEmail(
-      user.email,
-      `Your temporary password is: ${tempPassword}\n\nYou will be asked to set a new password on next login.`
-    )
+    try {
+      await sendTempPasswordEmail(user.email, tempPassword)
+    } catch {
+      // The password already changed; tell the admin plainly so they retry
+      // (a retry generates and sends a fresh temporary password).
+      return res.status(502).json({
+        error: 'Password was reset, but the email could not be sent. Please try the reset again.',
+      })
+    }
 
     res.json({ message: 'Password reset. Temporary password sent to user email.' })
   } catch (err) {

@@ -154,6 +154,21 @@ async function saveSession(req, res, next) {
       return res.status(400).json({ error: 'students array is required' })
     }
 
+    // Normalise and validate each row before touching the DB.
+    const rows = []
+    const seen = new Set()
+    for (const s of students) {
+      const enrollmentId = Number(s?.enrollmentId)
+      if (!Number.isInteger(enrollmentId) || enrollmentId <= 0) {
+        return res.status(400).json({ error: 'Each student needs a valid enrollmentId' })
+      }
+      if (seen.has(enrollmentId)) {
+        return res.status(400).json({ error: `Duplicate enrollmentId ${enrollmentId}` })
+      }
+      seen.add(enrollmentId)
+      rows.push({ enrollmentId, present: Boolean(s.present) })
+    }
+
     const assignment = await prisma.courseTeacher.findUnique({
       where: { courseId_userId: { courseId, userId: teacherId } },
     })
@@ -161,34 +176,41 @@ async function saveSession(req, res, next) {
       return res.status(403).json({ error: 'You are not assigned to this course' })
     }
 
-    const upserts = students.map(({ enrollmentId, present }) =>
-      prisma.attendance.upsert({
-        where: {
-          enrollmentId_date: {
-            enrollmentId: parseInt(enrollmentId),
-            date: sessionDate,
-          },
-        },
-        create: {
-          enrollmentId: parseInt(enrollmentId),
-          date: sessionDate,
-          present: Boolean(present),
-        },
-        update: {
-          present: Boolean(present),
-        },
+    // WHY: the teacher is authorised for :courseId only. Every enrollmentId in
+    // the body must belong to THIS course, or a teacher could write attendance
+    // into courses they don't teach by passing foreign enrollment ids.
+    const courseEnrollments = await prisma.enrollment.findMany({
+      where: { courseId },
+      select: { id: true },
+    })
+    const allowed = new Set(courseEnrollments.map((e) => e.id))
+    const foreign = rows.filter((r) => !allowed.has(r.enrollmentId)).map((r) => r.enrollmentId)
+    if (foreign.length > 0) {
+      return res.status(400).json({
+        error: `Enrollment(s) ${foreign.join(', ')} do not belong to this course`,
       })
+    }
+
+    // One transaction: a session is saved completely or not at all.
+    await prisma.$transaction(
+      rows.map(({ enrollmentId, present }) =>
+        prisma.attendance.upsert({
+          where: {
+            enrollmentId_date: { enrollmentId, date: sessionDate },
+          },
+          create: { enrollmentId, date: sessionDate, present },
+          update: { present },
+        })
+      )
     )
 
-    await Promise.all(upserts)
-
-    const presentCount = students.filter((s) => s.present).length
+    const presentCount = rows.filter((r) => r.present).length
     res.json({
       message: 'Attendance saved',
       date: sessionDate,
-      totalStudents: students.length,
+      totalStudents: rows.length,
       presentCount,
-      absentCount: students.length - presentCount,
+      absentCount: rows.length - presentCount,
     })
   } catch (err) {
     next(err)

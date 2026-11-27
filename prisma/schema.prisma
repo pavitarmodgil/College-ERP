@@ -33,6 +33,13 @@ enum DayOfWeek {
   SAT
 }
 
+enum AssessmentType {
+  QUIZ
+  ASSIGNMENT
+  EXAM
+  PROJECT
+}
+
 model Department {
   id        Int      @id @default(autoincrement())
   name      String
@@ -59,6 +66,7 @@ model User {
   taughtCourses     CourseTeacher[]
   announcements     Announcement[]
   timetableEntries  TimetableEntry[] @relation("TimetableTeacher")
+  assessmentsCreated Assessment[]    @relation("AssessmentAuthor")
   createdAt         DateTime         @default(now())
   updatedAt         DateTime         @updatedAt
 }
@@ -86,6 +94,7 @@ model Course {
   enrollments      Enrollment[]
   teachers         CourseTeacher[]
   timetableEntries TimetableEntry[]
+  assessments      Assessment[]
   createdAt        DateTime         @default(now())
 }
 
@@ -148,4 +157,27 @@ model TimetableEntry {
   semester  String // "2024-ODD" | "2024-EVEN" | "2025-ODD"
   createdAt DateTime  @default(now())
   updatedAt DateTime  @updatedAt
+
+  @@index([teacherId])
+  @@index([room])
+  @@index([semester])
+  @@index([dayOfWeek])
+}
+
+model Assessment {
+  id          Int            @id @default(autoincrement())
+  title       String
+  course      Course         @relation(fields: [courseId], references: [id])
+  courseId    Int
+  dueDate     DateTime
+  type        AssessmentType
+  semester    String
+  createdBy   User?          @relation("AssessmentAuthor", fields: [createdById], references: [id])
+  createdById Int?
+  createdAt   DateTime       @default(now())
+  updatedAt   DateTime       @updatedAt
+
+  @@index([courseId])
+  @@index([dueDate])
+  @@index([semester])
 }
